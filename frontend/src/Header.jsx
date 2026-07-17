@@ -2,10 +2,10 @@ import React from "react";
 import "./Header.css";
 
 const defaultLinks = [
-  { label: "หน้าแรก", href: "#home" },
-  { label: "สกินแคร์", href: "#skincare" },
-  { label: "เมคอัพ", href: "#makeup" },
-  { label: "เกี่ยวกับเรา", href: "#about" },
+  { label: "หน้าแรก", href: "/" },
+  { label: "สกินแคร์", href: "/skincare" },
+  { label: "เครื่องสำอาง", href: "/makeup" },
+  { label: "เกี่ยวกับเรา", href: "/about" },
 ];
 
 export default function Header({ links = defaultLinks, accountHref = "/login", cartHref = "/cart", basePath = "" }) {
