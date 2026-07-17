@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./home.css";
+import Header from "./Header";
 
 /**
  * Home — หน้าแรกเว็บอีคอมเมิร์ซเครื่องสำอาง
@@ -94,45 +95,7 @@ export default function Home() {
 
   return (
     <div className="home">
-      {/* Announcement bar */}
-      <div className="announce">จัดส่งฟรีทุกออเดอร์ตั้งแต่ 1,500 บาท · แถมกระเป๋าผ้าลิมิเต็ด</div>
-
-      {/* Header */}
-      <header className="header">
-        <div className="logo">
-          MAISON<span> Véra</span>
-        </div>
-        <nav>
-          <ul className="nav">
-            <li><a href="#home">หน้าแรก</a></li>
-            <li><a href="#skincare">สกินแคร์</a></li>
-            <li><a href="#makeup">เมคอัพ</a></li>
-
-            <li><a href="#about">เกี่ยวกับเรา</a></li>
-          </ul>
-        </nav>
-        <div className="header-icons">
-          <button className="icon-btn" aria-label="ค้นหา">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-              <circle cx="11" cy="11" r="7" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </button>
-          <a className="icon-btn" aria-label="บัญชีของฉัน" href="/login">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-            </svg>
-          </a>
-          <button className="icon-btn" aria-label="ตะกร้าสินค้า">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-              <path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6 8Z" />
-              <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-            </svg>
-            <span className="bag-count">2</span>
-          </button>
-        </div>
-      </header>
+      <Header />
 
       {/* Hero */}
       <section className="hero" id="home">
