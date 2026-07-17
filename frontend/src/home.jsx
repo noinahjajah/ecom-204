@@ -1,14 +1,8 @@
 import React, { useState } from "react";
 import "./home.css";
+import Skincare from './Skincare';
 
-/**
- * Home — หน้าแรกเว็บอีคอมเมิร์ซเครื่องสำอาง
- * ธีม: White Luxury (ivory / ink / muted gold)
- * ฟอนต์: Fraunces (display) + Jost (body) — โหลดผ่าน Google Fonts ใน Home.css
- *
- * วิธีใช้: import Home from "./Home";  แล้ววาง <Home /> ใน route "/"
- * แก้ไขข้อมูลสินค้า/รูปภาพในตัวแปร PRODUCTS และ CATEGORIES ด้านล่างได้เลย
- */
+
 
 const CATEGORIES = [
   {
@@ -105,10 +99,10 @@ export default function Home() {
         <nav>
           <ul className="nav">
             <li><a href="#home">หน้าแรก</a></li>
-            <li><a href="#skincare">สกินแคร์</a></li>
-            <li><a href="#makeup">เมคอัพ</a></li>
+            <li><a href="skincare">สกินแคร์</a></li>
+            <li><a href="makeup">เมคอัพ</a></li>
 
-            <li><a href="#about">เกี่ยวกับเรา</a></li>
+            <li><a href="about">เกี่ยวกับเรา</a></li>
           </ul>
         </nav>
         <div className="header-icons">
@@ -308,8 +302,8 @@ export default function Home() {
           <div>
             <h5>ช้อปปิ้ง</h5>
             <ul>
-              <li><a href="#skincare">สกินแคร์</a></li>
-              <li><a href="#makeup">เมคอัพ</a></li>
+              <li><a href="skincare">สกินแคร์</a></li>
+              <li><a href="makeup">เมคอัพ</a></li>
               <li><a href="#sets">เซ็ตของขวัญ</a></li>
             </ul>
           </div>
