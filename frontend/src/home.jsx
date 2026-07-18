@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import "./home.css";
-import Skincare from './Skincare';
-
-
+import Skincare from './User/Skincare';
+import AuthHeaderIcon from './AuthHeaderIcon';
 
 const CATEGORIES = [
   {
@@ -112,12 +111,7 @@ export default function Home() {
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </button>
-          <a className="icon-btn" aria-label="บัญชีของฉัน" href="/login">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-            </svg>
-          </a>
+          <AuthHeaderIcon />
           <button className="icon-btn" aria-label="ตะกร้าสินค้า">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
               <path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6 8Z" />

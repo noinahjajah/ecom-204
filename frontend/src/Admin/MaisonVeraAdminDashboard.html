@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MAISON Vera — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --cream: #faf7f2;
+    --cream-mid: #f5f1ea;
+    --cream-dark: #ede8df;
+    --border: #e5ddd0;
+    --ink: #221f1c;
+    --ink-soft: #5c5549;
+    --gold: #b8975a;
+    --gold-light: #f0e8d6;
+    --white: #ffffff;
+    --shadow-sm: 0 1px 4px rgba(34,31,28,0.07);
+    --shadow-md: 0 4px 20px rgba(34,31,28,0.10);
+    --shadow-lg: 0 12px 48px rgba(34,31,28,0.14);
+    --radius: 14px;
+    --font-display: 'Cormorant Garamond', serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ===== LAYOUT ===== */
+  .shell {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    background: var(--ink);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .sidebar-logo {
+    padding: 2rem 1.75rem 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .logo-wordmark {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--cream);
+    text-transform: uppercase;
+  }
+
+  .logo-wordmark span {
+    color: var(--gold);
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .logo-badge {
+    display: inline-block;
+    margin-top: 0.4rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    font-weight: 500;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 1.2rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-section-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    font-weight: 600;
+    padding: 0.8rem 0.75rem 0.3rem;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: 9px;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: rgba(255,255,255,0.55);
+    cursor: pointer;
+    transition: all 0.18s;
+    text-decoration: none;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
+  .nav-item.active { background: rgba(184,151,90,0.18); color: var(--gold); font-weight: 500; }
+  .nav-item.active .nav-icon { opacity: 1; }
+
+  .nav-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  .sidebar-footer {
+    padding: 1.2rem 1rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .admin-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .admin-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #b8975a, #8b6e3e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+    font-family: var(--font-display);
+  }
+
+  .admin-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.75);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .admin-role {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.05em;
+  }
+
+  .btn-logout {
+    width: 100%;
+    padding: 0.55rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.45);
+    font-size: 0.78rem;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.04em;
+  }
+
+  .btn-logout:hover { background: rgba(177,48,48,0.15); border-color: rgba(177,48,48,0.3); color: #f4a5a5; }
+
+  /* ===== MAIN CONTENT ===== */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== TOPBAR ===== */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.3rem 2.2rem;
+    background: rgba(250,247,242,0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .topbar-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+  }
+
+  .topbar-title span {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--ink-soft);
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .date-chip {
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    background: var(--cream-mid);
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.85rem;
+    border-radius: 99px;
+    letter-spacing: 0.03em;
+  }
+
+  .refresh-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.18s;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .refresh-btn:hover { background: var(--cream-mid); transform: rotate(20deg); }
+
+  /* ===== PAGE BODY ===== */
+  .page-body {
+    padding: 2rem 2.2rem 3rem;
+    flex: 1;
+  }
+
+  /* ===== SECTION LABEL ===== */
+  .section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  /* ===== KPI CARDS ===== */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 2.4rem;
+  }
+
+  .kpi-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 1.4rem 1.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s, box-shadow 0.18s;
+  }
+
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .kpi-card:hover::before { opacity: 1; }
+
+  .kpi-accent {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+
+  .kpi-accent.gold { background: var(--gold-light); }
+  .kpi-accent.green { background: #e3f3e6; }
+  .kpi-accent.blue { background: #e0ecfb; }
+  .kpi-accent.warm { background: #fdf1d9; }
+
+  .kpi-label {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+    font-weight: 500;
+  }
+
+  .kpi-value {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+
+  .kpi-note {
+    font-size: 0.7rem;
+    color: rgba(92,85,73,0.6);
+  }
+
+  /* ===== CONTENT GRID ===== */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  /* ===== TABLE PANEL ===== */
+  .panel {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--cream-mid);
+  }
+
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+  }
+
+  .tab-group {
+    display: flex;
+    gap: 4px;
+    background: var(--cream-dark);
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .tab-btn {
+    padding: 0.35rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-family: var(--font-body);
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  .tab-btn.active {
+    background: var(--white);
+    color: var(--ink);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+  }
+
+  /* ===== TABLE ===== */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.855rem;
+  }
+
+  .data-table thead tr {
+    background: var(--cream-mid);
+  }
+
+  .data-table th {
+    padding: 0.8rem 1rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid rgba(229,221,208,0.5);
+    vertical-align: middle;
+    color: var(--ink);
+  }
+
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr { transition: background 0.12s; }
+  .data-table tbody tr:hover td { background: #fdfaf6; }
+
+  .order-id {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ink);
+    letter-spacing: 0.03em;
+  }
+
+  .customer-name { font-weight: 500; }
+  .product-name { color: var(--ink-soft); font-size: 0.83rem; }
+  .amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .date-cell { color: rgba(92,85,73,0.6); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+
+  /* ===== BADGE ===== */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+
+  .badge-pending-pay  { background: #fdf1d9; color: #946200; }
+  .badge-paid         { background: #e3f3e6; color: #227a3c; }
+  .badge-cancelled    { background: #fbe4e4; color: #b13030; }
+  .badge-idle         { background: #eeece8; color: #666; }
+  .badge-preparing    { background: #fdf1d9; color: #946200; }
+  .badge-shipping     { background: #e0ecfb; color: #2358a3; }
+  .badge-delivered    { background: #e3f3e6; color: #227a3c; }
+
+  /* ===== SIDE PANEL ===== */
+  .side-stack { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .activity-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid rgba(229,221,208,0.5);
+    transition: background 0.12s;
+  }
+
+  .activity-item:last-child { border-bottom: none; }
+  .activity-item:hover { background: #fdfaf6; }
+
+  .activity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  .dot-gold { background: var(--gold); }
+  .dot-green { background: #40a860; }
+  .dot-blue { background: #3a74c8; }
+  .dot-red { background: #c84040; }
+
+  .activity-text {
+    font-size: 0.8rem;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+
+  .activity-time {
+    font-size: 0.7rem;
+    color: rgba(92,85,73,0.5);
+    margin-top: 2px;
+  }
+
+  /* ===== PRODUCT RANK ===== */
+  .product-row {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid rgba(229,221,208,0.5);
+  }
+
+  .product-row:last-child { border-bottom: none; }
+
+  .product-rank {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gold);
+    width: 22px;
+    text-align: center;
+  }
+
+  .product-info { flex: 1; min-width: 0; }
+  .product-name-rank { font-size: 0.82rem; font-weight: 500; color: var(--ink); }
+  .product-sold { font-size: 0.7rem; color: rgba(92,85,73,0.55); }
+
+  .product-bar-wrap {
+    width: 60px;
+    height: 5px;
+    background: var(--cream-dark);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .product-bar {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--gold), #d4b07a);
+  }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .kpi-card { animation: fadeUp 0.45s ease both; }
+  .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.12s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.19s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.26s; }
+
+  .panel { animation: fadeUp 0.5s 0.3s ease both; }
+  .side-stack { animation: fadeUp 0.5s 0.38s ease both; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 1100px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .content-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 680px) {
+    .sidebar { display: none; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .page-body { padding: 1.2rem; }
+    .topbar { padding: 1rem 1.2rem; }
+  }
+
+  /* HIDDEN VIEWS */
+  .view { display: none; }
+  .view.active { display: block; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-wordmark">MAISON <span>Vera</span></div>
+      <div class="logo-badge">Admin Console</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+
+      <button class="nav-item active" onclick="setTab('orders')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        </svg>
+        แดชบอร์ด
+      </button>
+
+      <button class="nav-item" onclick="setTab('orders')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        คำสั่งซื้อ
+      </button>
+
+      <button class="nav-item" onclick="setTab('customers')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        ลูกค้า
+      </button>
+
+      <div class="nav-section-label" style="margin-top:0.8rem">Catalog</div>
+
+      <button class="nav-item">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+        </svg>
+        สินค้า
+      </button>
+
+      <button class="nav-item">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        รายงาน
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="admin-info">
+        <div class="admin-avatar">A</div>
+        <div>
+          <div class="admin-name">admin@maisonvera.co</div>
+          <div class="admin-role">Super Admin</div>
+        </div>
+      </div>
+      <button class="btn-logout">ออกจากระบบ</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-title">แดช<span>บอร์ด</span></div>
+      <div class="topbar-right">
+        <div class="date-chip">18 July 2026</div>
+        <button class="refresh-btn" title="Refresh">
+          <svg width="14" height="14" fill="none" stroke="#5c5549" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- PAGE BODY -->
+    <div class="page-body">
+      <div class="section-label">Summary — July 2026</div>
+
+      <!-- KPI CARDS -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-accent gold">
+            <svg width="18" height="18" fill="none" stroke="#b8975a" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <div class="kpi-label">ยอดขายวันนี้</div>
+          <div class="kpi-value">฿5,060</div>
+          <div class="kpi-note">ไม่รวมคำสั่งที่ยกเลิก</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-accent blue">
+            <svg width="18" height="18" fill="none" stroke="#2358a3" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
+            </svg>
+          </div>
+          <div class="kpi-label">คำสั่งซื้อทั้งหมด</div>
+          <div class="kpi-value">5</div>
+          <div class="kpi-note">ทุกสถานะรวมกัน</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-accent warm">
+            <svg width="18" height="18" fill="none" stroke="#946200" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+            </svg>
+          </div>
+          <div class="kpi-label">รอจัดส่ง</div>
+          <div class="kpi-value">3</div>
+          <div class="kpi-note">ยังไม่ถึงมือลูกค้า</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-accent green">
+            <svg width="18" height="18" fill="none" stroke="#227a3c" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="kpi-label">ผู้ใช้งานทั้งหมด</div>
+          <div class="kpi-value">3</div>
+          <div class="kpi-note">ลูกค้าที่สมัครสมาชิก</div>
+        </div>
+      </div>
+
+      <!-- CONTENT GRID -->
+      <div class="content-grid">
+
+        <!-- TABLE PANEL -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">รายการล่าสุด</div>
+            <div class="tab-group">
+              <button class="tab-btn active" id="tab-orders" onclick="switchView('orders')">คำสั่งซื้อ</button>
+              <button class="tab-btn" id="tab-customers" onclick="switchView('customers')">ลูกค้า</button>
+            </div>
+          </div>
+
+          <!-- ORDERS VIEW -->
+          <div class="view active" id="view-orders">
+            <div style="overflow-x:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>รหัส</th>
+                    <th>ลูกค้า</th>
+                    <th>สินค้า</th>
+                    <th>ยอดรวม</th>
+                    <th>ชำระเงิน</th>
+                    <th>จัดส่ง</th>
+                    <th>วันที่</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="order-id">BA-1042</span></td>
+                    <td><span class="customer-name">สุชาดา วงศ์ทอง</span></td>
+                    <td><span class="product-name">Velvet Silk Serum</span></td>
+                    <td><span class="amount">฿2,480</span></td>
+                    <td><span class="badge badge-pending-pay">รอชำระเงิน</span></td>
+                    <td><span class="badge badge-idle">รอดำเนินการ</span></td>
+                    <td><span class="date-cell">2026-07-17</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="order-id">BA-1041</span></td>
+                    <td><span class="customer-name">ภัทรพล เจริญสุข</span></td>
+                    <td><span class="product-name">Rose Clay Balm x2</span></td>
+                    <td><span class="amount">฿2,580</span></td>
+                    <td><span class="badge badge-paid">ชำระแล้ว</span></td>
+                    <td><span class="badge badge-shipping">กำลังจัดส่ง</span></td>
+                    <td><span class="date-cell">2026-07-17</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="order-id">BA-1040</span></td>
+                    <td><span class="customer-name">Warattha Tenak</span></td>
+                    <td><span class="product-name">Golden Hour Highlighter</span></td>
+                    <td><span class="amount">฿1,150</span></td>
+                    <td><span class="badge badge-paid">ชำระแล้ว</span></td>
+                    <td><span class="badge badge-delivered">จัดส่งสำเร็จ</span></td>
+                    <td><span class="date-cell">2026-07-16</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="order-id">BA-1039</span></td>
+                    <td><span class="customer-name">ณัฐธิดา ใจดี</span></td>
+                    <td><span class="product-name">Bare Petal Lip Tint x3</span></td>
+                    <td><span class="amount">฿2,670</span></td>
+                    <td><span class="badge badge-paid">ชำระแล้ว</span></td>
+                    <td><span class="badge badge-preparing">กำลังเตรียมพัสดุ</span></td>
+                    <td><span class="date-cell">2026-07-16</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="order-id">BA-1038</span></td>
+                    <td><span class="customer-name">กิตติศักดิ์ มั่นคง</span></td>
+                    <td><span class="product-name">Velvet Silk Serum</span></td>
+                    <td><span class="amount">฿2,480</span></td>
+                    <td><span class="badge badge-cancelled">ยกเลิก</span></td>
+                    <td><span class="badge badge-cancelled">ยกเลิก</span></td>
+                    <td><span class="date-cell">2026-07-15</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- CUSTOMERS VIEW -->
+          <div class="view" id="view-customers">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ชื่อ</th>
+                  <th>อีเมล</th>
+                  <th>คำสั่งซื้อ</th>
+                  <th>สมัครเมื่อ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="customer-name">Warattha Tenak</span></td>
+                  <td><span class="product-name">warattha.ten@spumail.net</span></td>
+                  <td><span class="amount">4</span></td>
+                  <td><span class="date-cell">2026-06-02</span></td>
+                </tr>
+                <tr>
+                  <td><span class="customer-name">สุชาดา วงศ์ทอง</span></td>
+                  <td><span class="product-name">suchada.w@example.com</span></td>
+                  <td><span class="amount">1</span></td>
+                  <td><span class="date-cell">2026-07-10</span></td>
+                </tr>
+                <tr>
+                  <td><span class="customer-name">ภัทรพล เจริญสุข</span></td>
+                  <td><span class="product-name">pattarapon.c@example.com</span></td>
+                  <td><span class="amount">2</span></td>
+                  <td><span class="date-cell">2026-05-28</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SIDE PANELS -->
+        <div class="side-stack">
+
+          <!-- ACTIVITY -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">กิจกรรมล่าสุด</div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot dot-blue"></div>
+              <div>
+                <div class="activity-text">BA-1041 เริ่มจัดส่งแล้ว</div>
+                <div class="activity-time">2 นาทีที่แล้ว</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot dot-gold"></div>
+              <div>
+                <div class="activity-text">BA-1042 รอการชำระเงิน</div>
+                <div class="activity-time">18 นาทีที่แล้ว</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot dot-green"></div>
+              <div>
+                <div class="activity-text">BA-1040 ส่งถึงมือลูกค้าแล้ว</div>
+                <div class="activity-time">เมื่อวาน 15:42</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot dot-red"></div>
+              <div>
+                <div class="activity-text">BA-1038 ถูกยกเลิก</div>
+                <div class="activity-time">2026-07-15 09:11</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOP PRODUCTS -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">สินค้าขายดี</div>
+            </div>
+            <div class="product-row">
+              <div class="product-rank">1</div>
+              <div class="product-info">
+                <div class="product-name-rank">Velvet Silk Serum</div>
+                <div class="product-sold">ขายแล้ว 2 ชิ้น</div>
+                <div class="product-bar-wrap"><div class="product-bar" style="width:100%"></div></div>
+              </div>
+            </div>
+            <div class="product-row">
+              <div class="product-rank">2</div>
+              <div class="product-info">
+                <div class="product-name-rank">Bare Petal Lip Tint</div>
+                <div class="product-sold">ขายแล้ว 3 ชิ้น</div>
+                <div class="product-bar-wrap"><div class="product-bar" style="width:80%"></div></div>
+              </div>
+            </div>
+            <div class="product-row">
+              <div class="product-rank">3</div>
+              <div class="product-info">
+                <div class="product-name-rank">Rose Clay Cleansing Balm</div>
+                <div class="product-sold">ขายแล้ว 2 ชิ้น</div>
+                <div class="product-bar-wrap"><div class="product-bar" style="width:60%"></div></div>
+              </div>
+            </div>
+            <div class="product-row">
+              <div class="product-rank">4</div>
+              <div class="product-info">
+                <div class="product-name-rank">Golden Hour Highlighter</div>
+                <div class="product-sold">ขายแล้ว 1 ชิ้น</div>
+                <div class="product-bar-wrap"><div class="product-bar" style="width:38%"></div></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  function switchView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  function setTab(name) {
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    if (name === 'orders' || name === 'customers') switchView(name);
+  }
+</script>
+</body>
+</html>
