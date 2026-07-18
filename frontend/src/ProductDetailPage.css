@@ -1,0 +1,347 @@
+:root {
+  --pdp-ivory: #fbfaf8;
+  --pdp-paper: #ffffff;
+  --pdp-ink: #221f1c;
+  --pdp-taupe: #8f8477;
+  --pdp-gold: #ad8a55;
+  --pdp-gold-soft: #cfae7c;
+  --pdp-blush: #efe1d8;
+  --pdp-hairline: #e6e0d8;
+}
+
+.pdp {
+  background: var(--pdp-ivory);
+  color: var(--pdp-ink);
+  min-height: 100vh;
+  font-family: "IBM Plex Sans Thai", "Jost", sans-serif;
+}
+
+.pdp * {
+  box-sizing: border-box;
+}
+
+.pdp-container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 34px 24px 90px;
+}
+
+.pdp-breadcrumb {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--pdp-taupe);
+  margin: 8px 0 28px;
+  text-transform: uppercase;
+}
+
+.pdp-breadcrumb a {
+  text-decoration: none;
+  color: var(--pdp-taupe);
+}
+
+.pdp-breadcrumb a:hover {
+  color: var(--pdp-gold);
+}
+
+.pdp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 34px;
+  align-items: start;
+}
+
+@media (max-width: 920px) {
+  .pdp-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdp-media-box {
+  background: var(--pdp-paper);
+  border: 1px solid var(--pdp-hairline);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  padding: 18px;
+}
+
+.pdp-media-box img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  max-height: 420px;
+  margin: 0 auto;
+}
+
+.pdp-tag {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: var(--pdp-ink);
+  color: var(--pdp-ivory);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.pdp-summary {
+  padding-top: 6px;
+}
+
+.pdp-title {
+  font-family: "Fraunces", "IBM Plex Sans Thai", serif;
+  font-weight: 400;
+  font-size: clamp(1.7rem, 2.6vw, 2.2rem);
+  line-height: 1.2;
+  margin: 0 0 10px;
+}
+
+.pdp-price {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.pdp-now {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.pdp-old {
+  font-size: 14px;
+  color: var(--pdp-taupe);
+  text-decoration: line-through;
+}
+
+.pdp-desc {
+  color: var(--pdp-taupe);
+  line-height: 1.7;
+  margin: 0 0 18px;
+}
+
+.pdp-features h3,
+.pdp-ingredient h3,
+.pdp-variant h3 {
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pdp-gold);
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.pdp-features ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--pdp-ink);
+}
+
+.pdp-features li {
+  margin: 8px 0;
+  color: var(--pdp-taupe);
+  line-height: 1.6;
+}
+
+.pdp-ingredient p {
+  margin: 0;
+  color: var(--pdp-taupe);
+  line-height: 1.7;
+}
+
+.pdp-variant {
+  margin-top: 16px;
+}
+
+.pdp-variant-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pdp-variant-btn {
+  border: 1px solid var(--pdp-hairline);
+  background: var(--pdp-paper);
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--pdp-taupe);
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.pdp-variant-btn:hover {
+  border-color: var(--pdp-gold-soft);
+  color: var(--pdp-gold);
+}
+
+.pdp-variant-btn.is-active {
+  border-color: var(--pdp-gold);
+  color: var(--pdp-ink);
+  box-shadow: 0 0 0 3px rgba(173, 138, 85, 0.12);
+}
+
+.pdp-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+
+.pdp-smallprint {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--pdp-taupe);
+  opacity: 0.9;
+}
+
+.pdp-section {
+  margin-top: 42px;
+}
+
+.pdp-section-head {
+  margin-bottom: 18px;
+}
+
+.pdp-section-head h2 {
+  font-family: "Fraunces", "IBM Plex Sans Thai", serif;
+  font-weight: 400;
+  font-size: 22px;
+  margin: 0;
+}
+
+.pdp-reviews {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 920px) {
+  .pdp-reviews {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdp-review {
+  background: var(--pdp-paper);
+  border: 1px solid var(--pdp-hairline);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.pdp-review-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.pdp-rating {
+  color: var(--pdp-gold);
+  letter-spacing: 0.08em;
+}
+
+.pdp-review-text {
+  margin: 0;
+  color: var(--pdp-taupe);
+  line-height: 1.7;
+}
+
+.pdp-review-date {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--pdp-taupe);
+  opacity: 0.9;
+}
+
+.pdp-related {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 980px) {
+  .pdp-related {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .pdp-related {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdp-related-card {
+  text-decoration: none;
+  color: inherit;
+  background: var(--pdp-paper);
+  border: 1px solid var(--pdp-hairline);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.pdp-related-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(173, 138, 85, 0.6);
+}
+
+.pdp-related-card img {
+  width: 100%;
+  height: 210px;
+  object-fit: contain;
+  background: var(--pdp-blush);
+  padding: 14px;
+}
+
+.pdp-related-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--pdp-ink);
+  color: var(--pdp-ivory);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.pdp-related-info {
+  padding: 12px 14px 16px;
+}
+
+.pdp-related-name {
+  font-family: "Fraunces", "IBM Plex Sans Thai", serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.pdp-related-price {
+  font-weight: 700;
+  color: var(--pdp-ink);
+  font-size: 14px;
+}
+
+.pdp-empty {
+  padding: 70px 0;
+  text-align: center;
+}
+
+.btn-primary,
+.btn-ghost {
+  /* ใช้สไตล์ปุ่มที่มีอยู่ในหน้าเดิมเป็นหลัก */
+}
+

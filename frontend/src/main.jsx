@@ -7,38 +7,54 @@ import CheckoutPage from './CheckoutPage';
 import About from './About';
 import Makeup from './Makeup';
 import Skincare from './Skincare';
+import OrdersPage from './OrdersPage';
+import ProductDetailPage from './ProductDetailPage';
 
-const pathname = window.location.pathname.replace(/\/+$/, '');
-const route = pathname === '/login'
-  ? 'login'
-  : pathname === '/cart'
-  ? 'cart'
-  : pathname === '/checkout'
-  ? 'checkout'
-  : pathname === '/about'
-  ? 'about'
-  : pathname === '/makeup'
-  ? 'makeup'
-  : pathname === '/skincare'
-  ? 'skincare'
-  : 'home';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const pathname = window.location.pathname.replace(/\/+$/, "");
+
+const route =
+  pathname === "/login"
+    ? "login"
+    : pathname === "/cart"
+      ? "cart"
+      : pathname === "/checkout"
+        ? "checkout"
+        : pathname === "/about"
+          ? "about"
+          : pathname === "/makeup"
+            ? "makeup"
+            : pathname === "/skincare"
+              ? "skincare"
+              : pathname === "/orders" || pathname === "/orders.html"
+                ? "orders"
+                : pathname === "/product" || pathname === "/product.html"
+                  ? "product"
+                  : "home";
+
+
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    {route === 'login' ? (
+    {route === "login" ? (
       <Login />
-    ) : route === 'cart' ? (
+    ) : route === "cart" ? (
       <CartPage />
-    ) : route === 'checkout' ? (
+    ) : route === "checkout" ? (
       <CheckoutPage />
-    ) : route === 'about' ? (
+    ) : route === "about" ? (
       <About />
-    ) : route === 'makeup' ? (
+    ) : route === "makeup" ? (
       <Makeup />
-    ) : route === 'skincare' ? (
+    ) : route === "skincare" ? (
       <Skincare />
+    ) : route === "orders" ? (
+      <OrdersPage />
+    ) : route === "product" ? (
+      <ProductDetailPage />
     ) : (
       <Home />
     )}
+
   </React.StrictMode>
 );
+
