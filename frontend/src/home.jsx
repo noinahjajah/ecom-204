@@ -13,21 +13,21 @@ import { addToCart, slugify } from "./cart";
  */
 
 const CATEGORIES = [
-  {
-    name: "สกินแคร์",
-    en: "Skincare",
-    img: "https://placehold.co/600x800/efe1d8/221f1c?text=Skincare",
-  },
-  {
-    name: "เมคอัพ",
-    en: "Makeup",
-    img: "https://placehold.co/600x800/d8cfc2/221f1c?text=Makeup",
-  },
-  {
-    name: "น้ำหอม",
-    en: "Fragrance",
-    img: "https://placehold.co/600x800/ede6da/221f1c?text=Fragrance",
-  },
+  // {
+  //   name: "สกินแคร์",
+  //   en: "Skincare",
+  //   img: "https://placehold.co/600x800/efe1d8/221f1c?text=Skincare",
+  // },
+  // {
+  //   name: "เมคอัพ",
+  //   en: "Makeup",
+  //   img: "https://placehold.co/600x800/d8cfc2/221f1c?text=Makeup",
+  // },
+  // {
+  //   name: "น้ำหอม",
+  //   en: "Fragrance",
+  //   img: "https://placehold.co/600x800/ede6da/221f1c?text=Fragrance",
+  // },
 ];
 
 const PRODUCTS = [
@@ -124,10 +124,6 @@ export default function Home() {
             ค้นพบสกินแคร์และเมคอัพที่คัดสรรเพื่อผิวคุณโดยเฉพาะ
             เนื้อสัมผัสบางเบา ซึมซาบไว ให้ผิวเปล่งประกายอย่างเป็นธรรมชาติ
           </p>
-          <div className="hero-actions">
-            <button className="btn-primary">ช้อปคอลเลกชันใหม่</button>
-            <button className="btn-ghost">ดูเรื่องราวแบรนด์</button>
-          </div>
         </div>
         <div className="hero-visual">
           <div className="droplet-frame">
@@ -152,29 +148,6 @@ export default function Home() {
           <span>Made With Care</span>
         </div>
       </div>
-
-      {/* Categories */}
-      <section className="section" id="categories">
-        <div className="section-head">
-          <div>
-            <span className="eyebrow">Shop by Category</span>
-            <h2 className="display section-title">เลือกช้อปตามหมวดหมู่</h2>
-          </div>
-        </div>
-        <div className="category-rail">
-          {CATEGORIES.map((c) => (
-            <div className="category-card" key={c.en}>
-              <img className="bg" src={c.img} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              <div className="overlay" />
-              <div className="label">
-                <span className="eyebrow">{c.en}</span>
-                <div className="name display">{c.name}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Products */}
       <section className="section" id="products">
         <div className="section-head">
@@ -308,7 +281,7 @@ export default function Home() {
             <ul>
               <li><a href="#about">เกี่ยวกับเรา</a></li>
               <li><a href="#journal">Journal</a></li>
-              <li><a href="#store">สาขาหน้าร้าน</a></li>
+              {/* <li><a href="#store">สาขาหน้าร้าน</a></li> */}
             </ul>
           </div>
         </div>
