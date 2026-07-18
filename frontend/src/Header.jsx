@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./Header.css";
+import { getCartCount, subscribeCart } from "./cart";
 
 const defaultLinks = [
   { label: "หน้าแรก", href: "/" },
@@ -9,6 +10,16 @@ const defaultLinks = [
 ];
 
 export default function Header({ links = defaultLinks, accountHref = "/login", cartHref = "/cart", basePath = "" }) {
+  const [cartCount, setCartCount] = useState(() => getCartCount());
+
+  useEffect(() => {
+    setCartCount(getCartCount());
+    const unsubscribe = subscribeCart((cart) => {
+      setCartCount(cart.reduce((n, item) => n + item.qty, 0));
+    });
+    return unsubscribe;
+  }, []);
+
   const formatHref = (href) => {
     if (href.startsWith("#")) {
       return `${basePath}${href}`;
@@ -50,7 +61,7 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
               <path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6 8Z" />
               <path d="M9 8V6a3 3 0 0 1 6 0v2" />
             </svg>
-            <span className="bag-count">2</span>
+            {cartCount > 0 && <span className="bag-count">{cartCount}</span>}
           </a>
         </div>
       </header>

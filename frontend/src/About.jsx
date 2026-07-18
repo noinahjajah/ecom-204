@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./about.css";
+import "./About.css";
 import Header from "./Header";
 /**
  * About — หน้าเกี่ยวกับเรา เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
-import "./skincare.css";
+import "./Skincare.css";
 import Header from "./Header";
+import { addToCart, slugify } from "./cart";
 /**
  * Skincare — หน้าหมวดสกินแคร์ เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra
  * ธีม: White Luxury (ivory / ink / muted gold / sage)
@@ -147,6 +148,21 @@ export default function Skincare() {
   const [activeConcern, setActiveConcern] = useState("all");
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [justAdded, setJustAdded] = useState(null);
+
+  const handleAddToCart = (p) => {
+    addToCart({
+      id: slugify(p.name),
+      name: p.name,
+      category: "สกินแคร์",
+      variant: ROUTINE.find((r) => r.key === p.step)?.title || "",
+      price: p.price,
+      image: p.img,
+    });
+    setJustAdded(p.name);
+    window.clearTimeout(handleAddToCart._t);
+    handleAddToCart._t = window.setTimeout(() => setJustAdded(null), 1400);
+  };
 
   const filtered = useMemo(() => {
     if (activeConcern === "all") return PRODUCTS;
@@ -241,7 +257,9 @@ export default function Skincare() {
                 <div className="sc-product-media">
                   {p.tag && <span className="sc-product-tag">{p.tag}</span>}
                   <img src={p.img} alt={p.name} />
-                  <button className="sc-product-quickadd">หยิบใส่ตะกร้า</button>
+                  <button className="sc-product-quickadd" onClick={() => handleAddToCart(p)}>
+                    {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
+                  </button>
                 </div>
                 <div className="sc-product-info">
                   <span className="sc-product-step">

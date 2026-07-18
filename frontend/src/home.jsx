@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./home.css";
 import Header from "./Header";
+import { addToCart, slugify } from "./cart";
 
 /**
  * Home — หน้าแรกเว็บอีคอมเมิร์ซเครื่องสำอาง
@@ -85,6 +86,21 @@ const RITUAL = [
 export default function Home() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [justAdded, setJustAdded] = useState(null);
+
+  const handleAddToCart = (p) => {
+    addToCart({
+      id: slugify(p.name),
+      name: p.name,
+      category: "",
+      variant: "",
+      price: p.price,
+      image: p.img,
+    });
+    setJustAdded(p.name);
+    window.clearTimeout(handleAddToCart._t);
+    handleAddToCart._t = window.setTimeout(() => setJustAdded(null), 1400);
+  };
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -174,7 +190,9 @@ export default function Home() {
               <div className="product-media">
                 {p.tag && <span className="product-tag">{p.tag}</span>}
                 <img src={p.img} alt={p.name} />
-                <button className="product-quickadd">หยิบใส่ตะกร้า</button>
+                <button className="product-quickadd" onClick={() => handleAddToCart(p)}>
+                  {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
+                </button>
               </div>
               <div className="product-info">
                 <span className="eyebrow">Maison Véra</span>

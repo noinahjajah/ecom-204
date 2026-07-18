@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
-import "./makeup.css";
+import "./Makeup.css";
 import Header from "./Header";
+import { addToCart, slugify } from "./cart";
 /**
  * Makeup — หน้าหมวดเมคอัพ เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra
  * ธีม: White Luxury (ivory / ink / gold) — สีชุดเดียวกับ home.css
@@ -112,6 +113,21 @@ export default function Makeup() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [justAdded, setJustAdded] = useState(null);
+
+  const handleAddToCart = (p) => {
+    addToCart({
+      id: slugify(p.name),
+      name: p.name,
+      category: "เมคอัพ",
+      variant: p.finish || "",
+      price: p.price,
+      image: p.img,
+    });
+    setJustAdded(p.name);
+    window.clearTimeout(handleAddToCart._t);
+    handleAddToCart._t = window.setTimeout(() => setJustAdded(null), 1400);
+  };
 
   const filtered = useMemo(() => {
     if (activeCategory === "all") return PRODUCTS;
@@ -206,7 +222,9 @@ export default function Makeup() {
                 <div className="mk-product-media">
                   {p.tag && <span className="mk-product-tag">{p.tag}</span>}
                   <img src={p.img} alt={p.name} />
-                  <button className="mk-product-quickadd">หยิบใส่ตะกร้า</button>
+                  <button className="mk-product-quickadd" onClick={() => handleAddToCart(p)}>
+                    {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
+                  </button>
                 </div>
                 <div className="mk-product-info">
                   <span className="mk-product-finish">{p.finish}</span>

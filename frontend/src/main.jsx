@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import Home from './home';
 import Login from './Login';
 import CartPage from './CartPage';
+import CheckoutPage from './CheckoutPage';
 import About from './About';
 import Makeup from './Makeup';
 import Skincare from './Skincare';
@@ -12,6 +13,8 @@ const route = pathname === '/login'
   ? 'login'
   : pathname === '/cart'
   ? 'cart'
+  : pathname === '/checkout'
+  ? 'checkout'
   : pathname === '/about'
   ? 'about'
   : pathname === '/makeup'
@@ -26,6 +29,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <Login />
     ) : route === 'cart' ? (
       <CartPage />
+    ) : route === 'checkout' ? (
+      <CheckoutPage />
     ) : route === 'about' ? (
       <About />
     ) : route === 'makeup' ? (
