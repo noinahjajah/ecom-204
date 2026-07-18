@@ -16,14 +16,12 @@ import {
 /**
  * CheckoutPage — หน้าชำระเงินจริง (จบ flow end-to-end): กรอกที่อยู่ → เลือกวิธีชำระ →
  * ตรวจสอบบัตรด้วย Luhn algorithm จริง → จำลองการส่งไปเกตเวย์ → สร้างเลขคำสั่งซื้อ →
- * ล้างตะกร้า → หน้าสำเร็จ
+ * ล้างตะกร้า → redirect ไปหน้าติดตามคำสั่งซื้อ /orders.html
  *
  * ⚠️ หมายเหตุความปลอดภัย: โปรเจกต์นี้ยังไม่ได้เชื่อมต่อผู้ให้บริการชำระเงินจริง (เช่น Omise,
  * Stripe, 2C2P) จึงไม่มีการตัดเงินจริงเกิดขึ้น — เป็นการจำลองที่ตรวจสอบข้อมูลบัตรแบบเดียวกับ
  * ระบบจริง (Luhn, brand, วันหมดอายุ, CVV) แต่ไม่มีการเก็บเลขบัตรเต็มหรือ CVV ไว้ที่ใดเลย
- * เก็บเฉพาะ brand + เลข 4 ตัวท้าย + วันหมดอายุ เพื่อใช้แสดงผล "บัตรที่บันทึกไว้" เท่านั้น
- * ถ้าต้องการตัดเงินจริง ต้องสมัคร merchant account กับเกตเวย์ที่รองรับ PCI-DSS แล้วเรียก API
- * ฝั่ง backend (ห้ามส่งเลขบัตรเต็มผ่าน client ตรงไปเก็บเอง)
+ * เก็บเฉพาะ brand + เลข 4 ตัวท้าย + วันหมดอายุ เพื่อใช้แสดงผลเท่านั้น
  */
 
 const FREE_SHIPPING_THRESHOLD = 1500;
@@ -40,7 +38,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("card"); // card | cod | promptpay
   const [saveThisCard, setSaveThisCard] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState(null);
+  const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState({});
 
   const [shipping, setShipping] = useState({
@@ -77,6 +75,7 @@ export default function CheckoutPage() {
 
   function validate() {
     const next = {};
+
     if (!shipping.fullName.trim()) next.fullName = "กรุณากรอกชื่อผู้รับ";
     if (!/^0\d{8,9}$/.test(onlyDigits(shipping.phone))) next.phone = "กรุณากรอกเบอร์โทรให้ถูกต้อง";
     if (!shipping.address.trim()) next.address = "กรุณากรอกที่อยู่จัดส่ง";
@@ -89,67 +88,111 @@ export default function CheckoutPage() {
       if (!isCvvValid(card.cvv, brand)) next.cvv = "CVV ไม่ถูกต้อง";
     }
 
+    // แสดง error เฉพาะช่อง
     setErrors(next);
     return Object.keys(next).length === 0;
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (cart.length === 0) return;
-    if (!validate()) return;
 
-    setLoading(true);
+    try {
+      console.log("[CheckoutPage] handleSubmit start", {
+        cartLen: cart.length,
+        paymentMethod,
+        selectedSavedCardId,
+      });
 
-    // จำลองเวลาที่ระบบจริงใช้ยืนยันกับเกตเวย์ชำระเงิน
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    let paymentSummary;
-    if (paymentMethod === "card") {
-      let last4, cardBrand, expiry, cardholderName;
-      if (selectedSavedCardId !== "new") {
-        const saved = savedCards.find((c) => c.id === selectedSavedCardId);
-        last4 = saved.last4;
-        cardBrand = saved.brand;
-        expiry = saved.expiry;
-        cardholderName = saved.name;
-      } else {
-        const digits = onlyDigits(card.number);
-        last4 = digits.slice(-4);
-        cardBrand = brand;
-        expiry = card.expiry;
-        cardholderName = card.name;
-        if (saveThisCard) {
-          const next = saveCard({ brand: cardBrand, last4, expiry, name: cardholderName });
-          setSavedCards(next);
-        }
+      if (cart.length === 0) {
+        console.error("[CheckoutPage] cart is empty - redirect blocked");
+        setErrors((prev) => ({ ...prev, _form: "ตะกร้าว่าง กรุณาเลือกสินค้าอีกครั้ง" }));
+        return;
       }
-      paymentSummary = { method: "card", brand: cardBrand, last4, expiry, cardholderName };
-    } else if (paymentMethod === "promptpay") {
-      paymentSummary = { method: "promptpay" };
-    } else {
-      paymentSummary = { method: "cod" };
+
+      if (!validate()) {
+        console.error("[CheckoutPage] validate failed");
+        setErrors((prev) => ({ ...prev, _form: "กรุณาตรวจสอบข้อมูลให้ครบก่อนชำระเงิน" }));
+        return;
+      }
+
+      setLoading(true);
+
+      // จำลองเวลายืนยันกับเกตเวย์
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      let paymentSummary;
+
+      if (paymentMethod === "card") {
+        let last4, cardBrand, expiry, cardholderName;
+
+        if (selectedSavedCardId !== "new") {
+          const saved = savedCards.find((c) => c.id === selectedSavedCardId);
+          last4 = saved.last4;
+          cardBrand = saved.brand;
+          expiry = saved.expiry;
+          cardholderName = saved.name;
+        } else {
+          const digits = onlyDigits(card.number);
+          last4 = digits.slice(-4);
+          cardBrand = brand;
+          expiry = card.expiry;
+          cardholderName = card.name;
+
+          if (saveThisCard) {
+            const next = saveCard({ brand: cardBrand, last4, expiry, name: cardholderName });
+            setSavedCards(next);
+          }
+        }
+
+        paymentSummary = { method: "card", brand: cardBrand, last4, expiry, cardholderName };
+      } else if (paymentMethod === "promptpay") {
+        paymentSummary = { method: "promptpay" };
+      } else {
+        paymentSummary = { method: "cod" };
+      }
+
+      const nowIso = new Date().toISOString();
+
+      const baseTracking = {
+        carrier: "Flash Express",
+        trackingNumber: `TH${String(Math.floor(Math.random() * 9000000000) + 1000000000)}`,
+        estimatedDelivery: new Date(Date.now() + 3 * 86400000).toISOString(),
+      };
+
+      const newOrder = {
+        id: generateOrderId(),
+        items: cart,
+        subtotal,
+        shippingFee,
+        total,
+        shipping,
+        payment: paymentSummary,
+        status: "paid",
+        createdAt: nowIso,
+        statusHistory: [{ status: "paid", at: nowIso, ...baseTracking }],
+        trackingNumber: baseTracking.trackingNumber,
+        carrier: baseTracking.carrier,
+        estimatedDelivery: baseTracking.estimatedDelivery,
+      };
+
+      saveOrder(newOrder);
+      clearCart();
+      setCart([]);
+      setLoading(false);
+      setSuccess(true);
+
+      // Redirect หลัง success สั้น ๆ
+      setTimeout(() => {
+        window.location.href = `/orders.html?highlight=${newOrder.id}`;
+      }, 2000);
+    } catch (err) {
+      console.error("[CheckoutPage] handleSubmit error", err);
+      setErrors((prev) => ({ ...prev, _form: "เกิดข้อผิดพลาดในการสั่งซื้อ โปรดลองใหม่" }));
+      setLoading(false);
     }
-
-    const newOrder = {
-      id: generateOrderId(),
-      items: cart,
-      subtotal,
-      shippingFee,
-      total,
-      shipping,
-      payment: paymentSummary,
-      status: "paid",
-      createdAt: new Date().toISOString(),
-    };
-
-    saveOrder(newOrder);
-    clearCart();
-    setCart([]);
-    setOrder(newOrder);
-    setLoading(false);
   }
 
-  if (order) {
+  if (success) {
     return (
       <div className="checkout">
         <Header />
@@ -158,38 +201,19 @@ export default function CheckoutPage() {
             <div className="checkout-success-icon">✓</div>
             <h1>ชำระเงินสำเร็จ</h1>
             <p className="checkout-success-sub">ขอบคุณสำหรับคำสั่งซื้อของคุณ</p>
-            <div className="checkout-success-card">
-              <div className="checkout-success-row">
-                <span>เลขที่คำสั่งซื้อ</span>
-                <strong>{order.id}</strong>
-              </div>
-              <div className="checkout-success-row">
-                <span>ยอดชำระทั้งหมด</span>
-                <strong>{formatTHB(order.total)}</strong>
-              </div>
-              <div className="checkout-success-row">
-                <span>วิธีชำระเงิน</span>
-                <strong>
-                  {order.payment.method === "card"
-                    ? `${order.payment.brand} •••• ${order.payment.last4}`
-                    : order.payment.method === "promptpay"
-                    ? "พร้อมเพย์"
-                    : "เก็บเงินปลายทาง"}
-                </strong>
-              </div>
-              <div className="checkout-success-row">
-                <span>จัดส่งไปที่</span>
-                <strong>{order.shipping.fullName} · {order.shipping.phone}</strong>
-              </div>
+            <p className="checkout-redirect-hint">กำลังพาคุณไปยังหน้าติดตามคำสั่งซื้อ...</p>
+            <div className="checkout-success-loader">
+              <span></span>
+              <span></span>
+              <span></span>
             </div>
-            <a href="/" className="btn-primary">กลับสู่หน้าแรก</a>
           </div>
         </div>
       </div>
     );
   }
 
-  if (cart.length === 0) {
+  if (cart.length === 0 && !success) {
     return (
       <div className="checkout">
         <Header />
@@ -217,9 +241,10 @@ export default function CheckoutPage() {
 
         <h1 className="checkout-title">ชำระเงิน</h1>
 
+        {errors._form && <div className="checkout-error" style={{ marginBottom: 12 }}>{errors._form}</div>}
+
         <form className="checkout-layout" onSubmit={handleSubmit}>
           <div className="checkout-main">
-            {/* ── ที่อยู่จัดส่ง ── */}
             <section className="checkout-section">
               <h2>ที่อยู่จัดส่ง</h2>
               <div className="checkout-field">
@@ -254,7 +279,6 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {/* ── วิธีชำระเงิน ── */}
             <section className="checkout-section">
               <h2>วิธีชำระเงิน</h2>
               <div className="checkout-pay-methods">
@@ -296,7 +320,9 @@ export default function CheckoutPage() {
                   {selectedSavedCardId === "new" && (
                     <>
                       <div className="checkout-field">
-                        <label>หมายเลขบัตร {card.number && <span className="checkout-brand">{brand}</span>}</label>
+                        <label>
+                          หมายเลขบัตร {card.number && <span className="checkout-brand">{brand}</span>}
+                        </label>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -341,7 +367,10 @@ export default function CheckoutPage() {
                             inputMode="numeric"
                             value={card.cvv}
                             onChange={(e) =>
-                              setCard((prev) => ({ ...prev, cvv: onlyDigits(e.target.value).slice(0, 4) }))
+                              setCard((prev) => ({
+                                ...prev,
+                                cvv: onlyDigits(e.target.value).slice(0, 4),
+                              }))
                             }
                             placeholder="•••"
                             maxLength={4}
@@ -359,6 +388,7 @@ export default function CheckoutPage() {
                       </label>
                     </>
                   )}
+
                   <p className="checkout-security-note">
                     การชำระเงินนี้เป็นโหมดจำลองสำหรับโปรเจกต์การศึกษา ระบบตรวจสอบเลขบัตรจริง
                     (Luhn algorithm) แต่ยังไม่ได้เชื่อมต่อผู้ให้บริการชำระเงินจริง จึงไม่มีการตัดเงินเกิดขึ้น
@@ -379,7 +409,6 @@ export default function CheckoutPage() {
             </section>
           </div>
 
-          {/* ── สรุปคำสั่งซื้อ ── */}
           <aside className="checkout-summary">
             <h2>สรุปคำสั่งซื้อ</h2>
             <div className="checkout-summary-items">
@@ -415,3 +444,4 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
