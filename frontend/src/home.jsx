@@ -160,25 +160,30 @@ export default function Home() {
         <div className="product-grid">
           {PRODUCTS.map((p) => (
             <div className="product-card" key={p.name}>
-              <div className="product-media">
-                {p.tag && <span className="product-tag">{p.tag}</span>}
-                <img src={p.img} alt={p.name} />
-                <button className="product-quickadd" onClick={() => handleAddToCart(p)}>
-                  {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
-                </button>
-              </div>
-              <div className="product-info">
-                <span className="eyebrow">Maison Véra</span>
-                <h3 className="product-name">{p.name}</h3>
-                <p className="product-desc">{p.desc}</p>
-                <div className="product-price">
-                  {p.oldPrice && <span className="old">฿{p.oldPrice}</span>}
-                  ฿{p.price}
+              <a
+                className="product-card-link"
+                href={`/product?id=${encodeURIComponent(slugify(p.name))}`}
+                aria-label={`ดูรายละเอียดสินค้า ${p.name}`}
+                style={{ color: "inherit", textDecoration: "none" }}
+              >
+                <div className="product-media">
+                  {p.tag && <span className="product-tag">{p.tag}</span>}
+                  <img src={p.img} alt={p.name} />
                 </div>
-              </div>
+                <div className="product-info">
+                  <span className="eyebrow">Maison Véra</span>
+                  <h3 className="product-name">{p.name}</h3>
+                  <p className="product-desc">{p.desc}</p>
+                  <div className="product-price">
+                    {p.oldPrice && <span className="old">฿{p.oldPrice}</span>}
+                    ฿{p.price}
+                  </div>
+                </div>
+              </a>
             </div>
           ))}
         </div>
+
       </section>
 
       {/* Philosophy / pull quote */}

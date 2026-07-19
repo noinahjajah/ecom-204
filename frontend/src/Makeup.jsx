@@ -219,7 +219,14 @@ export default function Makeup() {
           <div className="mk-product-grid">
             {filtered.map((p) => (
               <div className="mk-product-card" key={p.name}>
-                <div className="mk-product-media">
+                <a
+                  className="mk-product-link"
+                  href={`/product?id=${encodeURIComponent(slugify(p.name))}`}
+                  aria-label={`ดูรายละเอียดสินค้า ${p.name}`}
+                  style={{ color: "inherit", textDecoration: "none" }}
+                >
+                  <div className="mk-product-media">
+
                   {p.tag && <span className="mk-product-tag">{p.tag}</span>}
                   <img src={p.img} alt={p.name} />
                   <button className="mk-product-quickadd" onClick={() => handleAddToCart(p)}>
@@ -235,8 +242,13 @@ export default function Makeup() {
                     ฿{p.price}
                   </div>
                 </div>
-              </div>
-            ))}
+              </a>
+            <button className="mk-product-quickadd" onClick={() => handleAddToCart(p)}>
+              {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
+            </button>
+          </div>
+        ))}
+
           </div>
         )}
       </section>

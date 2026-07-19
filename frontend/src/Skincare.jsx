@@ -254,30 +254,40 @@ export default function Skincare() {
           <div className="sc-product-grid">
             {filtered.map((p) => (
               <div className="sc-product-card" key={p.name}>
-                <div className="sc-product-media">
-                  {p.tag && <span className="sc-product-tag">{p.tag}</span>}
-                  <img src={p.img} alt={p.name} />
-                  <button className="sc-product-quickadd" onClick={() => handleAddToCart(p)}>
-                    {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
-                  </button>
-                </div>
-                <div className="sc-product-info">
-                  <span className="sc-product-step">
-                    {ROUTINE.find((r) => r.key === p.step)?.title}
-                  </span>
-                  <h3 className="sc-product-name">{p.name}</h3>
-                  <p className="sc-product-desc">{p.desc}</p>
-                  <p className="sc-product-ingredient">สารสำคัญ: {p.ingredient}</p>
-                  <div className="sc-product-price">
-                    {p.oldPrice && <span className="old">฿{p.oldPrice}</span>}
-                    ฿{p.price}
+                <a
+                  className="sc-product-link"
+                  href={`/product?id=${encodeURIComponent(slugify(p.name))}`}
+                  aria-label={`ดูรายละเอียดสินค้า ${p.name}`}
+                  style={{ color: "inherit", textDecoration: "none" }}
+                >
+                  <div className="sc-product-media">
+                    {p.tag && <span className="sc-product-tag">{p.tag}</span>}
+                    <img src={p.img} alt={p.name} />
                   </div>
-                </div>
+                  <div className="sc-product-info">
+                    <span className="sc-product-step">
+                      {ROUTINE.find((r) => r.key === p.step)?.title}
+                    </span>
+                    <h3 className="sc-product-name">{p.name}</h3>
+                    <p className="sc-product-desc">{p.desc}</p>
+                    <p className="sc-product-ingredient">สารสำคัญ: {p.ingredient}</p>
+                    <div className="sc-product-price">
+                      {p.oldPrice && <span className="old">฿{p.oldPrice}</span>}
+                      ฿{p.price}
+                    </div>
+                  </div>
+                </a>
+
+                <button className="sc-product-quickadd" onClick={() => handleAddToCart(p)}>
+                  {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
+                </button>
               </div>
             ))}
           </div>
+
         )}
       </section>
+
 
       {/* Philosophy / pull quote */}
       <section className="sc-philosophy">
