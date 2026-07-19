@@ -1,9 +1,30 @@
-import React, { useEffect, useMemo, useState } from "react";
+// 📄 ProductsTable.jsx
+// ─────────────────────────────────────────────────────────────
+// 🔗 Connects to:
+//    - productsDataStore.js → listProducts / deleteProducts / bulkUpdateProducts /
+//                              exportProductsJSON / importProductsJSON
+//    - productsUtils.js     → compareBySort, matchesSearch
+//    - adminProducts.css    → .admin-* classes (shared with ProductsDashboard.jsx)
+// 🚦 Route: /admin/products.html — all filters live in the URL querystring
+//    (search/status/category/brand/store/sort/pageSize/page/noImage/
+//    incomplete/createdToday) so links from ProductsDashboard.jsx and the
+//    "ดูในตาราง" best-seller link work as deep links.
+// 🛠️ FIX (this pass): the search box used to call window.location.href on
+//    every keystroke → full page reload per character = box loses focus,
+//    typing is effectively broken. Now it's a local, debounced input (see
+//    SearchBox below) that only pushes to the URL ~450ms after the user
+//    stops typing, or immediately on Enter.
+// ⚠️ Side effects: polls listProducts() every 2s; bulk/row actions call
+//    productsDataStore mutators directly then refresh() — no optimistic
+//    UI, so on a slow store swap this would need a loading state.
+// ─────────────────────────────────────────────────────────────
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Header from "../Header";
 import { listProducts, deleteProducts, bulkUpdateProducts, exportProductsJSON, importProductsJSON } from "./productsDataStore";
 import { compareBySort, matchesSearch } from "./productsUtils";
 import "./adminProducts.css";
 
+const TABLE_COLS = 17; // 👈 keep in sync with <thead> below (used for the empty-state colSpan)
 
 function getQuery() {
   const sp = new URLSearchParams(window.location.search);
@@ -12,31 +33,40 @@ function getQuery() {
   return obj;
 }
 
+function pushQuery(patch, { resetPage = true } = {}) {
+  const params = new URLSearchParams(window.location.search);
+  Object.entries(patch).forEach(([k, v]) => {
+    if (v === "" || v === null || v === undefined) params.delete(k);
+    else params.set(k, v);
+  });
+  if (resetPage) params.delete("page");
+  window.location.href = `/admin/products.html?${params.toString()}`;
+}
+
 function statusMatch(p, status) {
   if (!status || status === "All") return true;
   if (status === "OutOfStock") return Number(p.stockTotal) <= 0;
   return p.status === status;
 }
 
+function statusBadgeClass(status) {
+  switch (status) {
+    case "Active": return "admin-badge-active";
+    case "Draft": return "admin-badge-draft";
+    case "Hidden": return "admin-badge-hidden";
+    case "Pending": return "admin-badge-pending";
+    case "Rejected": return "admin-badge-rejected";
+    case "Deleted": return "admin-badge-deleted";
+    default: return "admin-badge-draft";
+  }
+}
+
 function toCSV(rows) {
   // MVP minimal export
   const headers = [
-    "id",
-    "name",
-    "sku",
-    "barcode",
-    "category",
-    "store",
-    "brand",
-    "price",
-    "promoPrice",
-    "stockTotal",
-    "soldCount",
-    "views",
-    "ratingAvg",
-    "status",
-    "createdAt",
-    "updatedAt",
+    "id", "name", "sku", "barcode", "category", "store", "brand",
+    "price", "promoPrice", "stockTotal", "soldCount", "views",
+    "ratingAvg", "status", "createdAt", "updatedAt",
   ];
   const escape = (s) => {
     const str = String(s ?? "");
@@ -44,16 +74,47 @@ function toCSV(rows) {
   };
   const lines = [headers.join(",")];
   rows.forEach((r) => {
-    lines.push(
-      headers
-        .map((h) => {
-          const v = h in r ? r[h] : "";
-          return escape(v);
-        })
-        .join(",")
-    );
+    lines.push(headers.map((h) => escape(h in r ? r[h] : "")).join(","));
   });
   return lines.join("\n");
+}
+
+// 🔎 SearchBox — local, debounced. Types feel instant because nothing
+// touches the URL until the user pauses (or hits Enter). Re-syncs from
+// the URL when the query changes from elsewhere (e.g. "รีเซ็ตตัวกรอง").
+function SearchBox({ initialValue }) {
+  const [value, setValue] = useState(initialValue || "");
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    setValue(initialValue || "");
+  }, [initialValue]);
+
+  const commit = (v) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    pushQuery({ search: v });
+  };
+
+  const onChange = (e) => {
+    const v = e.target.value;
+    setValue(v);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => commit(v), 450);
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === "Enter") commit(value);
+  };
+
+  return (
+    <input
+      className="admin-input"
+      value={value}
+      onChange={onChange}
+      onKeyDown={onKeyDown}
+      placeholder="ชื่อสินค้า / SKU / Barcode / แบรนด์"
+    />
+  );
 }
 
 export default function ProductsTable() {
@@ -61,44 +122,31 @@ export default function ProductsTable() {
   const [query, setQuery] = useState(() => getQuery());
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkMode, setBulkMode] = useState("hide");
+  const [importText, setImportText] = useState("");
 
   const allCategories = useMemo(() => {
     const set = new Set();
-    (products || []).forEach((p) => {
-      if (p.category) set.add(p.category);
-    });
+    (products || []).forEach((p) => p.category && set.add(p.category));
     return Array.from(set).sort((a, b) => String(a).localeCompare(String(b), "th"));
   }, [products]);
 
   const allBrands = useMemo(() => {
     const set = new Set();
-    (products || []).forEach((p) => {
-      if (p.brand) set.add(p.brand);
-    });
+    (products || []).forEach((p) => p.brand && set.add(p.brand));
     return Array.from(set).sort((a, b) => String(a).localeCompare(String(b), "th"));
   }, [products]);
 
   const allStores = useMemo(() => {
     const set = new Set();
-    (products || []).forEach((p) => {
-      if (p.store) set.add(p.store);
-    });
+    (products || []).forEach((p) => p.store && set.add(p.store));
     return Array.from(set).sort((a, b) => String(a).localeCompare(String(b), "th"));
   }, [products]);
 
-  const selectedCount = selectedIds.length;
-
-  const refresh = () => {
-
-    setProducts(listProducts());
-  };
+  const refresh = () => setProducts(listProducts());
 
   useEffect(() => {
     refresh();
-    const t = setInterval(() => {
-      // keep lightweight
-      refresh();
-    }, 2000);
+    const t = setInterval(refresh, 2000);
     return () => clearInterval(t);
   }, []);
 
@@ -113,20 +161,12 @@ export default function ProductsTable() {
 
     let rows = products.filter((p) => matchesSearch(p, searchText));
 
-    if (q.status) {
-      rows = rows.filter((p) => statusMatch(p, q.status));
-    }
+    if (q.status) rows = rows.filter((p) => statusMatch(p, q.status));
     if (q.category) rows = rows.filter((p) => String(p.category || "") === String(q.category));
     if (q.brand) rows = rows.filter((p) => String(p.brand || "") === String(q.brand));
     if (q.store) rows = rows.filter((p) => String(p.store || "") === String(q.store));
-
-    if (q.noImage === "1") {
-      rows = rows.filter((p) => !p.mainImage && (p.gallery?.length || 0) === 0);
-    }
-
-    if (q.incomplete === "1") {
-      rows = rows.filter((p) => !p.completeness?.isComplete);
-    }
+    if (q.noImage === "1") rows = rows.filter((p) => !p.mainImage && (p.gallery?.length || 0) === 0);
+    if (q.incomplete === "1") rows = rows.filter((p) => !p.completeness?.isComplete);
 
     if (q.createdToday === "1") {
       const now = new Date();
@@ -139,7 +179,6 @@ export default function ProductsTable() {
 
     const sortKey = q.sort || "newest";
     rows = [...rows].sort((a, b) => compareBySort(a, b, sortKey));
-
     return rows;
   }, [products, query]);
 
@@ -160,44 +199,24 @@ export default function ProductsTable() {
   const selectAllCurrent = () => {
     const ids = paged.map((p) => p.id);
     const allSelected = ids.every((id) => selectedSet.has(id));
-    setSelectedIds((prev) => {
-      if (allSelected) return prev.filter((id) => !ids.includes(id));
-      return Array.from(new Set([...prev, ...ids]));
-    });
+    setSelectedIds((prev) => (allSelected ? prev.filter((id) => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
   };
 
   const onBulkApply = () => {
     const ids = selectedIds;
     if (!ids.length) return;
 
-    if (bulkMode === "delete") {
-      deleteProducts(ids, { actor: "Admin" });
-    } else if (bulkMode === "hide") {
-      bulkUpdateProducts(ids, (p) => ({ ...p, status: "Hidden" }), { actor: "Admin" });
-    } else if (bulkMode === "show") {
+    // 🧭 map bulkMode → mutation. All go through bulkUpdateProducts()
+    // except "delete" (deleteProducts) — both are defined in productsDataStore.js
+    if (bulkMode === "delete") deleteProducts(ids, { actor: "Admin" });
+    else if (bulkMode === "hide") bulkUpdateProducts(ids, (p) => ({ ...p, status: "Hidden" }), { actor: "Admin" });
+    else if (bulkMode === "show" || bulkMode === "activate" || bulkMode === "approve")
       bulkUpdateProducts(ids, (p) => ({ ...p, status: "Active" }), { actor: "Admin" });
-    } else if (bulkMode === "activate") {
-      bulkUpdateProducts(ids, (p) => ({ ...p, status: "Active" }), { actor: "Admin" });
-    } else if (bulkMode === "approve") {
-      bulkUpdateProducts(ids, (p) => ({ ...p, status: "Active" }), { actor: "Admin" });
-    } else if (bulkMode === "reject") {
-      bulkUpdateProducts(ids, (p) => ({ ...p, status: "Rejected" }), { actor: "Admin" });
-    } else if (bulkMode === "outofstock") {
-      bulkUpdateProducts(ids, (p) => ({ ...p, stockTotal: 0, reservedStock: 0 }), { actor: "Admin" });
-    }
+    else if (bulkMode === "reject") bulkUpdateProducts(ids, (p) => ({ ...p, status: "Rejected" }), { actor: "Admin" });
+    else if (bulkMode === "outofstock") bulkUpdateProducts(ids, (p) => ({ ...p, stockTotal: 0, reservedStock: 0 }), { actor: "Admin" });
 
     setSelectedIds([]);
     refresh();
-  };
-
-  const exportJSON = () => {
-    const txt = exportProductsJSON();
-    downloadText(`products_export_${Date.now()}.json`, txt, "application/json");
-  };
-
-  const exportCSV = () => {
-    const csv = toCSV(filtered);
-    downloadText(`products_export_${Date.now()}.csv`, csv, "text/csv");
   };
 
   const downloadText = (filename, text, mime) => {
@@ -210,7 +229,9 @@ export default function ProductsTable() {
     URL.revokeObjectURL(url);
   };
 
-  const [importText, setImportText] = useState("");
+  const exportJSON = () => downloadText(`products_export_${Date.now()}.json`, exportProductsJSON(), "application/json");
+  const exportCSV = () => downloadText(`products_export_${Date.now()}.csv`, toCSV(filtered), "text/csv");
+
   const doImport = () => {
     try {
       importProductsJSON(importText, { actor: "Admin" });
@@ -222,217 +243,108 @@ export default function ProductsTable() {
   };
 
   return (
-    <div style={{ background: "#fbfaf8", minHeight: "100vh" }}>
+    <div className="admin-wrap">
       <Header />
-      <div style={{ maxWidth: 1400, margin: "18px auto", padding: "0 16px 40px" }}>
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+      <div className="admin-page">
+        <div className="admin-header-row">
           <div>
-            <div style={{ fontSize: 12, opacity: 0.7, letterSpacing: 0.12, textTransform: "uppercase" }}>
-              Admin • Product Management
-            </div>
-            <h1 style={{ margin: "6px 0 0", fontSize: 26 }}>รายการสินค้า</h1>
+            <div className="admin-eyebrow">Admin • Product Management</div>
+            <h1 className="admin-h1">รายการสินค้า</h1>
           </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div className="admin-header-actions">
             <a href="/admin/products/new.html" className="btn-primary" style={{ textDecoration: "none" }}>
               เพิ่มสินค้า
             </a>
-            <button type="button" className="btn-primary" style={{ cursor: "pointer" }} onClick={exportJSON}>
-              Export JSON
-            </button>
-            <button type="button" className="btn-primary" style={{ cursor: "pointer" }} onClick={exportCSV}>
-              Export CSV
-            </button>
+            <button type="button" className="admin-btn" onClick={exportJSON}>Export JSON</button>
+            <button type="button" className="admin-btn" onClick={exportCSV}>Export CSV</button>
           </div>
         </div>
 
-        <div className="admin-filter-grid">
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>ค้นหา</div>
-            <input
-              className="admin-input"
-              value={query.search || ""}
-              onChange={(e) => {
-                const params = new URLSearchParams(window.location.search);
-                params.set("search", e.target.value);
-                params.delete("page");
-                window.location.href = `/admin/products.html?${params.toString()}`;
-              }}
-              placeholder="ชื่อสินค้า / SKU / Barcode / แบรนด์"
-            />
-          </div>
+        {/* ---------- Filters ---------- */}
+        <div className="admin-panel">
+          <div className="admin-filter-grid">
+            <div>
+              <div className="admin-field-label">ค้นหา</div>
+              <SearchBox initialValue={query.search || ""} />
+            </div>
 
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>Status</div>
-            <select
-              className="admin-select"
-              value={query.status || "All"}
-              onChange={(e) => {
-                const params = new URLSearchParams(window.location.search);
-                params.set("status", e.target.value);
-                params.delete("page");
-                window.location.href = `/admin/products.html?${params.toString()}`;
-              }}
-            >
-              {[
-                "All",
-                "Active",
-                "Pending",
-                "Rejected",
-                "Hidden",
-                "OutOfStock",
-              ].map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <div className="admin-field-label">Status</div>
+              <select className="admin-select" value={query.status || "All"} onChange={(e) => pushQuery({ status: e.target.value })}>
+                {["All", "Active", "Draft", "Pending", "Rejected", "Hidden", "OutOfStock"].map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
 
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>Category</div>
-            <select
-              className="admin-select"
-              value={query.category || ""}
-              onChange={(e) => {
-                const params = new URLSearchParams(window.location.search);
-                const v = e.target.value;
-                if (v) params.set("category", v);
-                else params.delete("category");
-                params.delete("page");
-                window.location.href = `/admin/products.html?${params.toString()}`;
-              }}
-            >
-              <option value="">All</option>
-              {allCategories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <div className="admin-field-label">Category</div>
+              <select className="admin-select" value={query.category || ""} onChange={(e) => pushQuery({ category: e.target.value })}>
+                <option value="">All</option>
+                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
 
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>Brand</div>
-            <select
-              className="admin-select"
-              value={query.brand || ""}
-              onChange={(e) => {
-                const params = new URLSearchParams(window.location.search);
-                const v = e.target.value;
-                if (v) params.set("brand", v);
-                else params.delete("brand");
-                params.delete("page");
-                window.location.href = `/admin/products.html?${params.toString()}`;
-              }}
-            >
-              <option value="">All</option>
-              {allBrands.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <div className="admin-field-label">Brand</div>
+              <select className="admin-select" value={query.brand || ""} onChange={(e) => pushQuery({ brand: e.target.value })}>
+                <option value="">All</option>
+                {allBrands.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
 
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>Store</div>
-            <select
-              className="admin-select"
-              value={query.store || ""}
-              onChange={(e) => {
-                const params = new URLSearchParams(window.location.search);
-                const v = e.target.value;
-                if (v) params.set("store", v);
-                else params.delete("store");
-                params.delete("page");
-                window.location.href = `/admin/products.html?${params.toString()}`;
-              }}
-            >
-              <option value="">All</option>
-              {allStores.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <div className="admin-field-label">Store</div>
+              <select className="admin-select" value={query.store || ""} onChange={(e) => pushQuery({ store: e.target.value })}>
+                <option value="">All</option>
+                {allStores.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
 
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>Sort</div>
-            <select
-              className="admin-select"
-              value={query.sort || "newest"}
-              onChange={(e) => {
-                const params = new URLSearchParams(window.location.search);
-                params.set("sort", e.target.value);
-                params.delete("page");
-                window.location.href = `/admin/products.html?${params.toString()}`;
-              }}
-            >
-              {[
-                { value: "newest", label: "ใหม่ล่าสุด" },
-                { value: "oldest", label: "เก่าสุด" },
-                { value: "priceHigh", label: "ราคาสูงสุด" },
-                { value: "priceLow", label: "ราคาต่ำสุด" },
-                { value: "bestSelling", label: "ขายดีที่สุด" },
-                { value: "ratingHigh", label: "รีวิวสูงสุด" },
-                { value: "stockHigh", label: "จำนวนสต็อก" },
-                { value: "viewsHigh", label: "ยอดวิว" },
-              ].map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <div className="admin-field-label">Sort</div>
+              <select className="admin-select" value={query.sort || "newest"} onChange={(e) => pushQuery({ sort: e.target.value })}>
+                {[
+                  { value: "newest", label: "ใหม่ล่าสุด" },
+                  { value: "oldest", label: "เก่าสุด" },
+                  { value: "priceHigh", label: "ราคาสูงสุด" },
+                  { value: "priceLow", label: "ราคาต่ำสุด" },
+                  { value: "bestSelling", label: "ขายดีที่สุด" },
+                  { value: "ratingHigh", label: "รีวิวสูงสุด" },
+                  { value: "stockHigh", label: "จำนวนสต็อก" },
+                  { value: "viewsHigh", label: "ยอดวิว" },
+                ].map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
 
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>Page size</div>
-            <select
-              className="admin-select"
-              value={String(query.pageSize || 10)}
-              onChange={(e) => {
-                const params = new URLSearchParams(window.location.search);
-                params.set("pageSize", e.target.value);
-                params.delete("page");
-                window.location.href = `/admin/products.html?${params.toString()}`;
-              }}
-            >
-              {[10, 20, 30, 50].map((n) => (
-                <option key={n} value={String(n)}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <div className="admin-field-label">Page size</div>
+              <select className="admin-select" value={String(query.pageSize || 10)} onChange={(e) => pushQuery({ pageSize: e.target.value })}>
+                {[10, 20, 30, 50].map((n) => <option key={n} value={String(n)}>{n}</option>)}
+              </select>
+            </div>
 
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>Quick</div>
-            <button
-              type="button"
-              className="admin-mini-btn"
-              style={{ width: "100%" }}
-              onClick={() => {
-                window.location.href = "/admin/products.html";
-              }}
-            >
-              รีเซ็ตตัวกรอง
-            </button>
+            <div>
+              <div className="admin-field-label">Quick</div>
+              <button type="button" className="admin-btn" style={{ width: "100%" }} onClick={() => { window.location.href = "/admin/products.html"; }}>
+                รีเซ็ตตัวกรอง
+              </button>
+            </div>
           </div>
         </div>
 
-
-        <div style={{ marginTop: 14, background: "white", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+        {/* ---------- Table + bulk actions ---------- */}
+        <div className="admin-panel" style={{ marginTop: 14 }}>
+          <div className="admin-toolbar">
+            <div className="admin-toolbar-left">
+              <label className="admin-checkbox-label">
                 <input type="checkbox" checked={paged.length > 0 && paged.every((p) => selectedSet.has(p.id))} onChange={selectAllCurrent} />
                 เลือกทั้งหมด (เฉพาะหน้า)
               </label>
-              <div style={{ fontSize: 12, opacity: 0.7 }}>เลือก {selectedIds.length} รายการ</div>
+              <div className="admin-selected-count">เลือก {selectedIds.length} รายการ</div>
             </div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-              <select value={bulkMode} onChange={(e) => setBulkMode(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(0,0,0,0.12)", background: "white" }}>
+            <div className="admin-toolbar-left">
+              <select className="admin-select" style={{ width: "auto" }} value={bulkMode} onChange={(e) => setBulkMode(e.target.value)}>
                 <option value="hide">ซ่อน</option>
                 <option value="activate">เปิดขาย</option>
                 <option value="approve">อนุมัติ</option>
@@ -440,187 +352,121 @@ export default function ProductsTable() {
                 <option value="outofstock">ทำให้สินค้าหมด</option>
                 <option value="delete">ลบ</option>
               </select>
-              <button type="button" className="btn-primary" style={{ cursor: selectedIds.length ? "pointer" : "not-allowed", opacity: selectedIds.length ? 1 : 0.6 }} onClick={onBulkApply}>
+              <button
+                type="button"
+                className="admin-btn admin-btn-gold"
+                disabled={!selectedIds.length}
+                onClick={onBulkApply}
+              >
                 ทำรายการ
               </button>
             </div>
           </div>
 
-          <div style={{ overflowX: "auto", marginTop: 10 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
               <thead>
-                <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-                  <th style={{ padding: 10, width: 40 }} />
-                  <th style={{ padding: 10 }}>รูป</th>
-                  <th style={{ padding: 10 }}>SKU</th>
-                  <th style={{ padding: 10 }}>ชื่อสินค้า</th>
-                  <th style={{ padding: 10 }}>หมวดหมู่</th>
-                  <th style={{ padding: 10 }}>ร้านค้า</th>
-                  <th style={{ padding: 10 }}>แบรนด์</th>
-                  <th style={{ padding: 10 }}>ราคา</th>
-                  <th style={{ padding: 10 }}>ราคาโปร</th>
-                  <th style={{ padding: 10 }}>คงเหลือ</th>
-                  <th style={{ padding: 10 }}>จำนวนขาย</th>
-                  <th style={{ padding: 10 }}>ยอดวิว</th>
-                  <th style={{ padding: 10 }}>คะแนนรีวิว</th>
-                  <th style={{ padding: 10 }}>สถานะ</th>
-                  <th style={{ padding: 10 }}>วันที่สร้าง</th>
-                  <th style={{ padding: 10 }}>วันที่แก้ไข</th>
-                  <th style={{ padding: 10 }}>การจัดการ</th>
+                <tr>
+                  <th style={{ width: 40 }} />
+                  <th>รูป</th>
+                  <th>SKU</th>
+                  <th>ชื่อสินค้า</th>
+                  <th>หมวดหมู่</th>
+                  <th>ร้านค้า</th>
+                  <th>แบรนด์</th>
+                  <th>ราคา</th>
+                  <th>ราคาโปร</th>
+                  <th>คงเหลือ</th>
+                  <th>จำนวนขาย</th>
+                  <th>ยอดวิว</th>
+                  <th>คะแนนรีวิว</th>
+                  <th>สถานะ</th>
+                  <th>วันที่สร้าง</th>
+                  <th>วันที่แก้ไข</th>
+                  <th>การจัดการ</th>
                 </tr>
               </thead>
               <tbody>
                 {paged.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: "1px dashed rgba(0,0,0,0.08)" }}>
-                    <td style={{ padding: 10 }}>
-                      <input type="checkbox" checked={selectedSet.has(p.id)} onChange={() => toggleSelected(p.id)} />
-                    </td>
-                    <td style={{ padding: 10 }}>
-                      <img src={p.mainImage || "https://placehold.co/40x40"} alt={p.name} style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 10, border: "1px solid rgba(0,0,0,0.08)" }} />
-                    </td>
-                    <td style={{ padding: 10, fontFamily: "monospace", fontSize: 12 }}>
+                  <tr key={p.id}>
+                    <td><input type="checkbox" checked={selectedSet.has(p.id)} onChange={() => toggleSelected(p.id)} /></td>
+                    <td><img src={p.mainImage || "https://placehold.co/40x40"} alt={p.name} className="admin-cell-thumb" /></td>
+                    <td className="admin-mono">
                       <div>{p.sku || "-"}</div>
-                      <div style={{ opacity: 0.7 }}>{p.barcode || ""}</div>
+                      <div style={{ opacity: 0.6 }}>{p.barcode || ""}</div>
                     </td>
-                    <td style={{ padding: 10 }}>
-                      <div style={{ fontWeight: 800 }}>{p.name || "-"}</div>
-                      <div style={{ opacity: 0.7, fontSize: 12 }}>{p.enName || ""}</div>
+                    <td>
+                      <div className="admin-cell-title">{p.name || "-"}</div>
+                      <div className="admin-cell-subtitle">{p.enName || ""}</div>
                       {!p.mainImage && (p.gallery?.length || 0) === 0 && (
-                        <div style={{ color: "#ad8a55", fontSize: 12, marginTop: 2 }}>ไม่มีรูป</div>
+                        <div className="admin-cell-flag is-warning">ไม่มีรูป</div>
                       )}
                       {!p.completeness?.isComplete && (
-                        <div style={{ color: "#b23a48", fontSize: 12, marginTop: 2 }}>ข้อมูลไม่ครบ</div>
+                        <div className="admin-cell-flag is-alert">ข้อมูลไม่ครบ</div>
                       )}
                     </td>
-                    <td style={{ padding: 10 }}>{p.category || "-"}</td>
-                    <td style={{ padding: 10 }}>{p.store || "-"}</td>
-                    <td style={{ padding: 10 }}>{p.brand || "-"}</td>
-                    <td style={{ padding: 10 }}>{p.price ?? "-"}</td>
-                    <td style={{ padding: 10 }}>{p.promoPrice ?? "-"}</td>
-                    <td style={{ padding: 10 }}>{p.stockTotal ?? 0}</td>
-                    <td style={{ padding: 10 }}>{p.soldCount ?? 0}</td>
-                    <td style={{ padding: 10 }}>{p.views ?? 0}</td>
-                    <td style={{ padding: 10 }}>{p.ratingAvg ?? 0} / 5</td>
-                    <td style={{ padding: 10 }}>
-                      <span
-                        className={"admin-badge " + (
-                          p.status === "Active"
-                            ? "admin-badge-active"
-                            : p.status === "Hidden"
-                              ? "admin-badge-hidden"
-                              : p.status === "Pending"
-                                ? "admin-badge-pending"
-                                : p.status === "Rejected"
-                                  ? "admin-badge-rejected"
-                                  : p.status === "OutOfStock"
-                                    ? "admin-badge-outofstock"
-                                    : ""
-                        )}
-                      >
-                        {p.status || "-"}
+                    <td>{p.category || "-"}</td>
+                    <td>{p.store || "-"}</td>
+                    <td>{p.brand || "-"}</td>
+                    <td>{p.price ?? "-"}</td>
+                    <td>{p.promoPrice ?? "-"}</td>
+                    <td>{p.stockTotal ?? 0}</td>
+                    <td>{p.soldCount ?? 0}</td>
+                    <td>{p.views ?? 0}</td>
+                    <td>{p.ratingAvg ?? 0} / 5</td>
+                    <td>
+                      <span className={"admin-badge " + statusBadgeClass(Number(p.stockTotal) <= 0 ? "OutOfStock" : p.status)}>
+                        {Number(p.stockTotal) <= 0 && p.status === "Active" ? "OutOfStock" : (p.status || "-")}
                       </span>
                     </td>
-
-                    <td style={{ padding: 10, fontSize: 12, opacity: 0.75 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
-                    <td style={{ padding: 10, fontSize: 12, opacity: 0.75 }}>{new Date(p.updatedAt).toLocaleDateString()}</td>
-                    <td style={{ padding: 10 }}>
+                    <td style={{ fontSize: 12, opacity: 0.75 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                    <td style={{ fontSize: 12, opacity: 0.75 }}>{new Date(p.updatedAt).toLocaleDateString()}</td>
+                    <td>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <a href={`/product?id=${encodeURIComponent(p.seo?.urlSlug || p.id)}`} style={{ fontSize: 12, opacity: 0.8, textDecoration: "none" }}>
-                          ดูตัวอย่าง
-                        </a>
-                        <div className="admin-actions-row" style={{ gap: 6 }}>
-                          <button
-                            type="button"
-                            className="admin-mini-btn admin-mini-btn-strong"
-                            onClick={() => {
-                              bulkUpdateProducts([p.id], (pp) => ({ ...pp, status: "Active" }), { actor: "Admin" });
-                              refresh();
-                            }}
-                          >
+                        <a href={`/product?id=${encodeURIComponent(p.seo?.urlSlug || p.id)}`} className="admin-row-link">ดูตัวอย่าง</a>
+                        <div className="admin-actions-row">
+                          <button type="button" className="admin-mini-btn admin-mini-btn-strong" onClick={() => { bulkUpdateProducts([p.id], (pp) => ({ ...pp, status: "Active" }), { actor: "Admin" }); refresh(); }}>
                             เปิดขาย
                           </button>
-                          <button
-                            type="button"
-                            className="admin-mini-btn"
-                            onClick={() => {
-                              bulkUpdateProducts([p.id], (pp) => ({ ...pp, status: "Hidden" }), { actor: "Admin" });
-                              refresh();
-                            }}
-                          >
+                          <button type="button" className="admin-mini-btn" onClick={() => { bulkUpdateProducts([p.id], (pp) => ({ ...pp, status: "Hidden" }), { actor: "Admin" }); refresh(); }}>
                             ซ่อน
                           </button>
-                          <button
-                            type="button"
-                            className="admin-mini-btn"
-                            onClick={() => {
-                              bulkUpdateProducts([p.id], (pp) => ({ ...pp, status: "Rejected" }), { actor: "Admin" });
-                              refresh();
-                            }}
-                          >
+                          <button type="button" className="admin-mini-btn" onClick={() => { bulkUpdateProducts([p.id], (pp) => ({ ...pp, status: "Rejected" }), { actor: "Admin" }); refresh(); }}>
                             ปฏิเสธ
                           </button>
                         </div>
                         <button
                           type="button"
                           className="admin-mini-btn admin-mini-btn-danger"
-                          onClick={() => {
-                            bulkUpdateProducts(
-                              [p.id],
-                              (pp) => ({ ...pp, stockTotal: 0, reservedStock: 0, status: "OutOfStock" }),
-                              { actor: "Admin" }
-                            );
-                            refresh();
-                          }}
+                          onClick={() => { bulkUpdateProducts([p.id], (pp) => ({ ...pp, stockTotal: 0, reservedStock: 0, status: "OutOfStock" }), { actor: "Admin" }); refresh(); }}
                         >
                           หมดสต็อก
                         </button>
-                        <a
-                          href={`/admin/products/edit.html?id=${encodeURIComponent(p.id)}`}
-                          className="btn-primary"
-                          style={{ textDecoration: "none", padding: "8px 12px", fontSize: 12, width: "fit-content" }}
-                        >
+                        <a href={`/admin/products/edit.html?id=${encodeURIComponent(p.id)}`} className="btn-primary" style={{ textDecoration: "none", padding: "8px 12px", fontSize: 12, width: "fit-content" }}>
                           แก้ไข
                         </a>
                       </div>
                     </td>
-
                   </tr>
                 ))}
                 {paged.length === 0 && (
                   <tr>
-                    <td colSpan={17} style={{ padding: 20, opacity: 0.7 }}>
-                      ไม่พบข้อมูล
-                    </td>
+                    <td colSpan={TABLE_COLS} className="admin-table-empty">ไม่พบข้อมูลตามตัวกรองนี้</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: 12, alignItems: "center" }}>
-            <div style={{ fontSize: 12, opacity: 0.7 }}>
-              Showing {start + 1}-{Math.min(start + pageSize, total)} of {total}
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className="admin-pagination-row">
+            <div className="admin-pagination-hint">Showing {total === 0 ? 0 : start + 1}-{Math.min(start + pageSize, total)} of {total}</div>
+            <div className="admin-pagination">
               {Array.from({ length: totalPages }).slice(0, 7).map((_, i) => {
                 const n = i + 1;
+                const params = new URLSearchParams(window.location.search);
+                params.set("page", String(n));
                 return (
-                  <a
-                    key={n}
-                    href={(() => {
-                      const params = new URLSearchParams(window.location.search);
-                      params.set("page", String(n));
-                      return `/admin/products.html?${params.toString()}`;
-                    })()}
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      background: n === pageSafe ? "rgba(0,0,0,0.04)" : "transparent",
-                      textDecoration: "none",
-                      fontSize: 12,
-                    }}
-                  >
+                  <a key={n} href={`/admin/products.html?${params.toString()}`} className={"admin-page-link" + (n === pageSafe ? " is-current" : "")}>
                     {n}
                   </a>
                 );
@@ -629,27 +475,24 @@ export default function ProductsTable() {
           </div>
         </div>
 
-        <div style={{ marginTop: 14 }}>
-          <div style={{ background: "white", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: 12 }}>
-            <div style={{ fontWeight: 800 }}>Import JSON (MVP)</div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-              วาง JSON ที่เคย Export มาก่อนหน้า แล้วกด Import
-            </div>
-            <textarea
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              placeholder="Paste products JSON here..."
-              style={{ width: "100%", minHeight: 120, marginTop: 10, padding: 12, borderRadius: 10, border: "1px solid rgba(0,0,0,0.12)" }}
-            />
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-              <button type="button" className="btn-primary" style={{ cursor: importText.trim() ? "pointer" : "not-allowed", opacity: importText.trim() ? 1 : 0.6 }} onClick={doImport}>
-                Import
-              </button>
-            </div>
+        {/* ---------- Import JSON ---------- */}
+        <div className="admin-panel" style={{ marginTop: 14 }}>
+          <div style={{ fontWeight: 700 }}>Import JSON (MVP)</div>
+          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>วาง JSON ที่เคย Export มาก่อนหน้า แล้วกด Import</div>
+          <textarea
+            className="admin-textarea"
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder="Paste products JSON here..."
+            style={{ minHeight: 120, marginTop: 10 }}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+            <button type="button" className="admin-btn admin-btn-gold" disabled={!importText.trim()} onClick={doImport}>
+              Import
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

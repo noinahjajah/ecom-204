@@ -224,6 +224,8 @@ function getSeedProducts() {
       attributes: p.attributes || [],
       shipping: p.shipping || { weightKg: 0, widthCm: 0, heightCm: 0, lengthCm: 0, carrier: "", shippingFee: 0, freeShipping: false },
       seo: p.seo || { metaTitle: p.name, metaDescription: "", urlSlug: slugify(p.name), keywords: "" },
+      warehouses: p.warehouses || [],
+      cost: p.cost ?? 0,
       completeness: comp,
       statusDetail: {
         pending: p.status === "Pending",
@@ -283,6 +285,10 @@ export function upsertProduct({ product, actor = "Admin" }) {
   const isNew = !product.id || !all.some((p) => p.id === product.id);
   const id = product.id || `prod_${slugify(product.sku || product.name || "item")}_${Math.random().toString(16).slice(2, 8)}`;
 
+  // 📝 optional custom note from AddEditProduct.jsx's save bar — never
+  // stored on the product itself, only used for the activity log entry below.
+  const customNote = product._saveNote;
+
   const normalized = {
     ...product,
     id,
@@ -294,12 +300,15 @@ export function upsertProduct({ product, actor = "Admin" }) {
     variants: product.variants || [],
     variantOptions: product.variantOptions || [],
     attributes: product.attributes || [],
+    warehouses: product.warehouses || [],
     seo: product.seo || { metaTitle: product.name, metaDescription: "", urlSlug: slugify(product.name), keywords: "" },
     shipping: product.shipping || { weightKg: 0, widthCm: 0, heightCm: 0, lengthCm: 0, carrier: "", shippingFee: 0, freeShipping: false },
     stockTotal: Number.isFinite(product.stockTotal) ? product.stockTotal : parseMoneyToNumber(product.stockTotal),
     reservedStock: Number.isFinite(product.reservedStock) ? product.reservedStock : parseMoneyToNumber(product.reservedStock),
+    cost: Number.isFinite(product.cost) ? product.cost : parseMoneyToNumber(product.cost),
     promoPrice: product.promoPrice === undefined ? null : product.promoPrice,
   };
+  delete normalized._saveNote;
 
   normalized.completeness = productCompleteness(normalized);
 
@@ -315,9 +324,16 @@ export function upsertProduct({ product, actor = "Admin" }) {
 
   let nextAll;
   if (isNew) {
-    nextAll = [normalized, ...all];
+    const created = pushActivity(normalized, {
+      who: actor,
+      at: nowIso(),
+      before: null,
+      after: { status: normalized.status, price: normalized.price, promoPrice: normalized.promoPrice, stockTotal: normalized.stockTotal },
+      note: customNote || "Created product",
+    });
+    nextAll = [created, ...all];
     saveAll(nextAll);
-    return normalized;
+    return created;
   }
 
   const prev = all.find((p) => p.id === id);
@@ -330,7 +346,7 @@ export function upsertProduct({ product, actor = "Admin" }) {
     at: nowIso(),
     before: before ? { status: before.status, price: before.price, promoPrice: before.promoPrice, stockTotal: before.stockTotal } : null,
     after: { status: after.status, price: after.price, promoPrice: after.promoPrice, stockTotal: after.stockTotal },
-    note: "Upsert product",
+    note: customNote || "Upsert product",
   };
 
   const updated = pushActivity(normalized, changed);

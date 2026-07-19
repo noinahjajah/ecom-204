@@ -109,4 +109,3 @@ export function compareBySort(a, b, sortKey) {
       return 0;
   }
 }
-
