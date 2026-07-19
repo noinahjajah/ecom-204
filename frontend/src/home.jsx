@@ -207,10 +207,6 @@ export default function Home() {
                   </div>
                 </div>
               </a>
-
-              <button className="product-quickadd" onClick={() => handleAddToCart(p)}>
-                {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
-              </button>
             </div>
           ))}
         </div>

@@ -7,7 +7,9 @@ const defaultLinks = [
   { label: "สกินแคร์", href: "/skincare" },
   { label: "เครื่องสำอาง", href: "/makeup" },
   { label: "เกี่ยวกับเรา", href: "/about" },
+  { label: "Admin • สินค้า", href: "/admin/products.html" },
 ];
+
 
 export default function Header({ links = defaultLinks, accountHref = "/login", cartHref = "/cart", basePath = "" }) {
   const [cartCount, setCartCount] = useState(() => getCartCount());
