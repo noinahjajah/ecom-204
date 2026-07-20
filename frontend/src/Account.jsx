@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
-import "../Login.css"; // <--- แก้ไขตรงนี้เป็น ../ เรียบร้อยแล้วครับ
+import { supabase } from "./supabaseClient";
+import "./Login.css";
 
 export default function Account() {
   const [user, setUser] = useState(null);

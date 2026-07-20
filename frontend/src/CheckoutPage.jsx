@@ -183,7 +183,7 @@ export default function CheckoutPage() {
 
       // Redirect หลัง success สั้น ๆ
       setTimeout(() => {
-        window.location.href = `/orders.html?highlight=${newOrder.id}`;
+        window.location.href = `/orders?highlight=${newOrder.id}`;
       }, 2000);
     } catch (err) {
       console.error("[CheckoutPage] handleSubmit error", err);

@@ -226,7 +226,7 @@ export default function OrdersPage() {
               return (
                 <a
                   key={o.id}
-                  href={`/orders.html?highlight=${encodeURIComponent(o.id)}`}
+                  href={`/orders?highlight=${encodeURIComponent(o.id)}`}
                   style={{
                     textDecoration: "none",
                     borderRadius: 999,

@@ -277,10 +277,6 @@ export default function Skincare() {
                     </div>
                   </div>
                 </a>
-
-                <button className="sc-product-quickadd" onClick={() => handleAddToCart(p)}>
-                  {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
-                </button>
               </div>
             ))}
           </div>

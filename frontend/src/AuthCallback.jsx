@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 
+// Admin emails จำลอง (สำหรับ mock mode)
+const MOCK_ADMIN_EMAILS = ["admin@maisonvera.com"];
+
 export default function AuthCallback() {
   const [status, setStatus] = useState("loading"); // loading | error
 
   useEffect(() => {
     // เช็คเผื่อไว้ ในกรณีที่ Parameter ไม่ถูกตัด หรือหลุดไปอยู่ใน Hash
-    const isAdminIntent = window.location.href.includes("admin=1");
+    const isAdminIntent = window.location.href.includes("admin=1") || window.location.href.includes("admin=1");
 
     supabase.auth.getSession().then(async ({ data, error }) => {
       if (error || !data.session) {
@@ -17,25 +20,19 @@ export default function AuthCallback() {
         return;
       }
 
-      const userId = data.session.user.id;
+      const userEmail = data.session.user.email || "";
 
-      // ดึง Role จากตาราง Profiles มาตรวจสอบ
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .single();
+      // Mock: ตรวจสอบ admin จากรายการที่กำหนดไว้
+      const isAdmin = MOCK_ADMIN_EMAILS.includes(userEmail);
 
-      const role = profileError ? "user" : profile.role;
-
-      // 1. ถ้า Database บอกว่าคนนี้คือ Admin ให้ไปหน้า Dashboard เสมอ (แก้ปัญหา Google ตัด URL)
-      if (role === "admin") {
-        window.location.href = "/admin/dashboard";
+      // 1. ถ้าคนนี้คือ Admin ให้ไปหน้า Dashboard เสมอ
+      if (isAdmin) {
+        window.location.href = "/admin/orders";
         return;
       }
 
       // 2. ถ้าไม่ใช่ Admin แต่ตั้งใจจะเข้าผ่านหน้า Admin Login (ลักลอบเข้า)
-      if (isAdminIntent && role !== "admin") {
+      if (isAdminIntent && !isAdmin) {
         setStatus("error");
         await supabase.auth.signOut(); // บังคับเตะออก
         setTimeout(() => {

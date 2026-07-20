@@ -1,0 +1,83 @@
+.admin-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fbfaf8;
+  font-family: "Inter", sans-serif;
+}
+
+.admin-login-card {
+  background: #fff;
+  border: 1px solid rgba(36, 31, 26, 0.09);
+  border-radius: 20px;
+  padding: 48px 40px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(36, 31, 26, 0.08);
+  text-align: center;
+}
+
+.admin-login-logo {
+  font-family: "Fraunces", serif;
+  font-size: 1.8rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.admin-login-logo span {
+  color: #a3824c;
+  font-style: italic;
+}
+
+.admin-login-eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #a3824c;
+  font-weight: 600;
+  margin-bottom: 24px;
+  display: inline-block;
+}
+
+.admin-login-title {
+  font-family: "Fraunces", serif;
+  font-size: 2rem;
+  font-weight: 400;
+  margin: 0 0 12px;
+  color: #241f1a;
+}
+
+.admin-login-sub {
+  color: rgba(36, 31, 26, 0.62);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  margin: 0 0 36px;
+}
+
+.admin-login-btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #241f1a;
+  color: #fbfaf8;
+  border: 1px solid #241f1a;
+  padding: 17px;
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.admin-login-btn-google:hover {
+  background: transparent;
+  color: #241f1a;
+}
+

@@ -9,13 +9,13 @@ import Makeup from './Makeup';
 import Skincare from './Skincare';
 import OrdersPage from './OrdersPage';
 import ProductDetailPage from './ProductDetailPage';
-import ProductsDashboard from './admin-products/ProductsDashboard';
-import ProductsTable from './admin-products/ProductsTable';
-import AddEditProduct from './admin-products/AddEditProduct';
-
+import AddEditProduct from './admin/pages/AddEditProduct';
+import AdminDashboard from './admin/AdminDashboard';
+import AdminLogin from './admin/AdminLogin';
 
 
 const pathname = window.location.pathname.replace(/\/+$/, "");
+
 
 const route =
   pathname === "/login"
@@ -24,23 +24,30 @@ const route =
       ? "cart"
       : pathname === "/checkout"
         ? "checkout"
-        : pathname === "/about"
-          ? "about"
-          : pathname === "/makeup"
-            ? "makeup"
-            : pathname === "/skincare"
-              ? "skincare"
-              : pathname === "/orders" || pathname === "/orders.html"
-                ? "orders"
-                : pathname === "/product" || pathname === "/product.html"
-                  ? "product"
-                  : pathname === "/admin/products" || pathname === "/admin/products.html"
-                    ? "adminProducts"
-                    : pathname === "/admin/products/new" || pathname === "/admin/products/new.html"
-                      ? "adminProductsNew"
-                      : pathname === "/admin/products/edit" || pathname === "/admin/products/edit.html"
-                        ? "adminProductsEdit"
-                        : "home";
+      : pathname === "/about"
+        ? "about"
+      : pathname === "/makeup"
+        ? "makeup"
+      : pathname === "/skincare"
+        ? "skincare"
+      : pathname === "/orders"
+        ? "orders"
+      : pathname === "/product"
+        ? "product"
+      : pathname === "/admin"
+        ? "adminOrders"
+      : pathname === "/admin/login"
+        ? "adminLogin"
+      : pathname === "/admin/products"
+        ? "adminProducts"
+      : pathname === "/admin/products/new"
+        ? "adminProductsNew"
+      : pathname === "/admin/products/edit"
+        ? "adminProductsEdit"
+      : pathname === "/admin/orders"
+        ? "adminOrders"
+      : "home";
+
 
 
 
@@ -62,15 +69,20 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <OrdersPage />
     ) : route === "product" ? (
       <ProductDetailPage />
+) : route === "adminLogin" ? (
+      <AdminLogin />
     ) : route === "adminProducts" ? (
-      <ProductsTable />
+      <AdminDashboard />
     ) : route === "adminProductsNew" ? (
       <AddEditProduct />
     ) : route === "adminProductsEdit" ? (
       <AddEditProduct />
+) : route === "adminOrders" ? (
+      <AdminDashboard />
     ) : (
       <Home />
     )}
+
 
 
   </React.StrictMode>
