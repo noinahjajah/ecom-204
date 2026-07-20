@@ -810,3 +810,216 @@
 .admin-save-status.is-error {
   color: var(--rose);
 }
+/* กันมันเรียกใช้ซ้ำ */
+/* ---------- Admin Topbar ---------- */
+
+.admin-topbar-wrap {
+  min-height: 0;
+  padding: 0;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.admin-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.admin-logo {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--ink);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.admin-logo span {
+  color: var(--gold-ink);
+  font-weight: 400;
+}
+
+.admin-logo-tag {
+  font-family: "Inter", sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.admin-topbar-nav ul {
+  display: flex;
+  gap: 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-topbar-nav a {
+  font-family: "Inter", sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.admin-topbar-nav a:hover {
+  color: var(--gold-ink);
+}
+
+.admin-topbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.admin-user-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-user-chip.is-loading {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.admin-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: "Inter", sans-serif;
+  flex-shrink: 0;
+}
+
+.admin-user-email {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-family: "Inter", sans-serif;
+}
+
+@media (max-width: 720px) {
+  .admin-topbar {
+    padding: 12px 16px;
+  }
+  .admin-topbar-left {
+    gap: 16px;
+  }
+  .admin-user-email {
+    display: none;
+  }
+}
+/* ---------- Admin user menu (dropdown) ---------- */
+
+.admin-user-menu {
+  position: relative;
+}
+
+.admin-user-chip--clickable {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 999px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.admin-user-chip--clickable:hover {
+  border-color: var(--line-strong);
+  background: rgba(36, 31, 26, 0.03);
+}
+
+.admin-user-chip--clickable:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.admin-chip-caret {
+  font-size: 10px;
+  color: var(--ink-faint);
+  transition: transform 0.15s ease;
+  margin-left: 2px;
+}
+
+.admin-chip-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.admin-role-badge {
+  color: var(--gold-ink);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.admin-user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 14px;
+  z-index: 50;
+  animation: admin-dropdown-in 0.12s ease-out;
+}
+
+@keyframes admin-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-user-dropdown-name {
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.admin-user-dropdown-email {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.admin-user-dropdown-logout {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .admin-user-dropdown {
+    right: -8px;
+  }
+}

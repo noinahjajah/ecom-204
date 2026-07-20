@@ -12,8 +12,9 @@ import ProductDetailPage from './ProductDetailPage';
 import ProductsDashboard from './admin-products/ProductsDashboard';
 import ProductsTable from './admin-products/ProductsTable';
 import AddEditProduct from './admin-products/AddEditProduct';
-
-
+import AdminLogin from './admin-products/AdminLogin';
+import AdminLayout from './admin-products/AdminLayout';
+import AuthCallback from './AuthCallback';
 
 const pathname = window.location.pathname.replace(/\/+$/, "");
 
@@ -34,15 +35,19 @@ const route =
                 ? "orders"
                 : pathname === "/product" || pathname === "/product.html"
                   ? "product"
-                  : pathname === "/admin/products" || pathname === "/admin/products.html"
-                    ? "adminProducts"
-                    : pathname === "/admin/products/new" || pathname === "/admin/products/new.html"
-                      ? "adminProductsNew"
-                      : pathname === "/admin/products/edit" || pathname === "/admin/products/edit.html"
-                        ? "adminProductsEdit"
-                        : "home";
-
-
+                  : pathname === "/auth/callback"
+                    ? "authCallback"
+                    : pathname === "/admin/login"
+                      ? "adminLogin"
+                      : pathname === "/admin" || pathname === "/admin/dashboard"
+                        ? "adminDashboard"
+                        : pathname === "/admin/products" || pathname === "/admin/products.html"
+                          ? "adminProducts"
+                          : pathname === "/admin/products/new" || pathname === "/admin/products/new.html"
+                            ? "adminProductsNew"
+                            : pathname === "/admin/products/edit" || pathname === "/admin/products/edit.html"
+                              ? "adminProductsEdit"
+                              : "home";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -62,17 +67,28 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <OrdersPage />
     ) : route === "product" ? (
       <ProductDetailPage />
+    ) : route === "authCallback" ? (
+      <AuthCallback />
+    ) : route === "adminLogin" ? (
+      <AdminLogin />
+    ) : route === "adminDashboard" ? (
+      <AdminLayout>
+        <ProductsDashboard />
+      </AdminLayout>
     ) : route === "adminProducts" ? (
-      <ProductsTable />
+      <AdminLayout>
+        <ProductsTable />
+      </AdminLayout>
     ) : route === "adminProductsNew" ? (
-      <AddEditProduct />
+      <AdminLayout>
+        <AddEditProduct />
+      </AdminLayout>
     ) : route === "adminProductsEdit" ? (
-      <AddEditProduct />
+      <AdminLayout>
+        <AddEditProduct />
+      </AdminLayout>
     ) : (
       <Home />
     )}
-
-
   </React.StrictMode>
 );
-

@@ -5,10 +5,12 @@ export default function AuthCallback() {
   const [status, setStatus] = useState("loading"); // loading | error
 
   useEffect(() => {
-    // เช็คเผื่อไว้ ในกรณีที่ Parameter ไม่ถูกตัด หรือหลุดไปอยู่ใน Hash
     const isAdminIntent = window.location.href.includes("admin=1");
 
     supabase.auth.getSession().then(async ({ data, error }) => {
+      console.log("=== DEBUG: session ===", data.session);
+      console.log("=== DEBUG: session error ===", error);
+
       if (error || !data.session) {
         setStatus("error");
         setTimeout(() => {
@@ -18,33 +20,34 @@ export default function AuthCallback() {
       }
 
       const userId = data.session.user.id;
+      console.log("=== DEBUG: userId ===", userId);
 
-      // ดึง Role จากตาราง Profiles มาตรวจสอบ
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", userId)
         .single();
 
-      const role = profileError ? "user" : profile.role;
+      console.log("=== DEBUG: profile ===", profile);
+      console.log("=== DEBUG: profileError ===", profileError);
 
-      // 1. ถ้า Database บอกว่าคนนี้คือ Admin ให้ไปหน้า Dashboard เสมอ (แก้ปัญหา Google ตัด URL)
+      const role = profileError ? "user" : profile.role;
+      console.log("=== DEBUG: final role ===", role);
+
       if (role === "admin") {
         window.location.href = "/admin/dashboard";
         return;
       }
 
-      // 2. ถ้าไม่ใช่ Admin แต่ตั้งใจจะเข้าผ่านหน้า Admin Login (ลักลอบเข้า)
       if (isAdminIntent && role !== "admin") {
         setStatus("error");
-        await supabase.auth.signOut(); // บังคับเตะออก
+        await supabase.auth.signOut();
         setTimeout(() => {
           window.location.href = "/admin/login";
         }, 1800);
         return;
       }
 
-      // 3. ถ้าเป็นผู้ใช้งานทั่วไป (User)
       window.location.href = "/";
     });
   }, []);

@@ -1,6 +1,7 @@
 ﻿import React from "react";
 import "./Login.css";
 import Header from "./Header";
+import { supabase } from "./supabaseClient";
 
 /**
  * Login — หน้าล็อกอินเว็บอีคอมเมิร์ซเครื่องสำอาง (เหลือแค่ Google Login)
@@ -10,22 +11,18 @@ import Header from "./Header";
 export default function Login() {
   const handleGoogleLogin = async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/login/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ redirectTo: `${window.location.origin}/auth/callback` }),
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            prompt: "select_account consent",
+          },
+        },
       });
-      const data = await res.json();
-      
-      if (data.url) {
-        // ดึง URL ที่ได้จาก Backend มาเติมคำสั่งบังคับเลือกบัญชี
-        const finalUrl = new URL(data.url);
-        finalUrl.searchParams.set("prompt", "select_account consent");
-        
-        // ส่งผู้ใช้ไปยัง URL ที่แก้ไขแล้ว
-        window.location.href = finalUrl.toString();
-      } else {
-        console.error("ไม่ได้รับ URL สำหรับ Google login:", data);
+
+      if (error) {
+        console.error("เกิดข้อผิดพลาดในการล็อกอิน:", error.message);
       }
     } catch (err) {
       console.error("Google login error:", err);

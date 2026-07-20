@@ -1,27 +1,12 @@
-// 📄 ProductsDashboard.jsx
-// ─────────────────────────────────────────────────────────────
-// 🔗 Connects to:
-//    - productsDataStore.js  → listProducts(), computeDashboardStats()
-//    - adminProducts.css     → .admin-* classes (shared with ProductsTable.jsx)
-//    - ../Header             → shared site header (not modified here)
-// 🚦 Route: /admin/products/dashboard (linked from admin nav)
-//    Each stat card navigates to /admin/products.html with a query filter
-//    that ProductsTable.jsx reads via getQuery() — keep param names in
-//    sync between the two files (status / createdToday / sort / noImage /
-//    incomplete) or the deep-links silently stop filtering.
-// ⚠️ Side effects: polls listProducts() every 1.5s (setInterval) purely to
-//    keep counts fresh while the tab is open — cheap because the MVP store
-//    is just localStorage, but swap for a real fetch+cache if this ever
-//    talks to a real API.
-// ─────────────────────────────────────────────────────────────
 import React, { useEffect, useMemo, useState } from "react";
-import Header from "../Header";
 import { computeDashboardStats, listProducts } from "./productsDataStore";
 import "./adminProducts.css";
+import AdminHeader from "./AdminHeader";
 
 // 🧩 StatCard — one clickable KPI tile. `tone` just recolors the number
 // (default / warning / alert) so problem-counts (no image, incomplete,
 // out of stock) read differently from healthy counts at a glance.
+
 function StatCard({ label, value, onClick, tone }) {
   return (
     <button type="button" className="admin-stat-card" onClick={onClick}>
@@ -54,7 +39,8 @@ export default function ProductsDashboard() {
 
   return (
     <div className="admin-wrap">
-      <Header />
+      <AdminHeader />
+
       <div className="admin-page">
         <div className="admin-header-row">
           <div>
@@ -93,6 +79,7 @@ export default function ProductsDashboard() {
                   <div className="admin-bestseller-meta">Sold: {bestSeller.soldCount || 0}</div>
                 </div>
                 <div style={{ marginLeft: "auto" }}>
+                  {/* แก้ไขตรงนี้: เติมแท็ก <a กลับเข้าไป */}
                   <a
                     href={`/admin/products.html?search=${encodeURIComponent(bestSeller.name || "")}`}
                     className="btn-primary"
