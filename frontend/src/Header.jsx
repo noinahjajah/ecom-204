@@ -107,10 +107,12 @@
 //     </>
 //   );
 // }
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./Header.css";
 import { getCartCount, subscribeCart } from "./cart";
 import { supabase } from "./supabaseClient";
+import { PRODUCTS } from "./productData";
+import { listProducts } from "./admin-products/productsDataStore";
 
 const defaultLinks = [
   { label: "หน้าแรก", href: "/" },
@@ -123,7 +125,11 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
   const [cartCount, setCartCount] = useState(() => getCartCount());
   const [user, setUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const menuRef = useRef(null);
+  const searchRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     setCartCount(getCartCount());
@@ -149,15 +155,24 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
 
   // ปิดเมนูเมื่อคลิกข้างนอก
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !searchOpen) return;
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setSearchOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
+  }, [menuOpen, searchOpen]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      window.setTimeout(() => searchInputRef.current?.focus(), 0);
+    }
+  }, [searchOpen]);
 
   const formatHref = (href) => {
     if (href.startsWith("#")) {
@@ -170,6 +185,47 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
     await supabase.auth.signOut();
     setMenuOpen(false);
   };
+
+  const handleSearchToggle = () => {
+    setSearchOpen((value) => !value);
+    setMenuOpen(false);
+  };
+
+  const handleSearchSelect = (productId) => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    window.location.href = `${basePath}/product?id=${encodeURIComponent(productId)}`;
+  };
+
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+
+    const allProducts = [...listProducts(), ...PRODUCTS];
+    const seen = new Map();
+
+    allProducts.forEach((product) => {
+      const key = product.id || product.name;
+      if (!seen.has(key)) {
+        seen.set(key, product);
+      }
+    });
+
+    return Array.from(seen.values()).filter((product) => {
+      const haystack = [
+        product.name,
+        product.desc,
+        product.descriptionShort,
+        product.category,
+        product.tag,
+        product.tags?.join(" "),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    }).slice(0, 5);
+  }, [searchQuery]);
 
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
   const displayName = user?.user_metadata?.full_name || user?.email || "ผู้ใช้";
@@ -191,12 +247,49 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
           </ul>
         </nav>
         <div className="header-icons">
-          <button className="icon-btn" aria-label="ค้นหา" type="button">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-              <circle cx="11" cy="11" r="7" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </button>
+          <div className="search-panel-wrapper" ref={searchRef}>
+            <button className="icon-btn" aria-label="ค้นหา" type="button" onClick={handleSearchToggle}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
+
+            {searchOpen && (
+              <div className="search-panel">
+                <label className="search-label" htmlFor="header-search">ค้นหา</label>
+                <input
+                  id="header-search"
+                  ref={searchInputRef}
+                  className="search-input"
+                  type="text"
+                  placeholder="ค้นหาสินค้า เช่น เซรั่ม, คอนซีลเลอร์"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+
+                {searchQuery.trim() ? (
+                  searchResults.length > 0 ? (
+                    <ul className="search-results">
+                      {searchResults.map((product) => (
+                        <li key={product.id}>
+                          <a href={`${basePath}/product?id=${encodeURIComponent(product.id)}`} className="search-result-item" onClick={() => handleSearchSelect(product.id)}>
+                            <span className="search-result-title">{product.name}</span>
+                            <span className="search-result-meta">{product.category} • {product.price} บาท</span>
+                            <span className="search-result-desc">{product.desc}</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="search-empty">ไม่พบสินค้าที่ตรงกับคำค้นหา</div>
+                  )
+                ) : (
+                  <div className="search-empty">พิมพ์ชื่อสินค้า หมวดหมู่ หรือคำอธิบายเพื่อค้นหา</div>
+                )}
+              </div>
+            )}
+          </div>
 
           {user ? (
             <div className="account-menu" ref={menuRef} style={{ position: "relative" }}>
