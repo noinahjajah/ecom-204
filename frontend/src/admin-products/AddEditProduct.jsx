@@ -62,7 +62,7 @@ function emptyProduct() {
     manufacturer: "",
     category: "",
     store: "Maison Véra",
-    brand: "",
+    brand: "Maison Véra",
     sku: "",
     barcode: "",
     price: 0,
@@ -96,16 +96,24 @@ function emptyProduct() {
 
 // ───────────────────────── Repeatable field helpers ─────────────────────────
 
-// 🖼️ Gallery — grid of image URL thumbnails with add/remove
-function GalleryEditor({ gallery, onChange }) {
-  const [draft, setDraft] = useState("");
+// 🖼️ Gallery — select image files from the device and add them to the gallery
+function GalleryEditor({ gallery, onChange, onMainImageChange }) {
   const list = gallery || [];
 
-  const add = () => {
-    const v = draft.trim();
-    if (!v) return;
-    onChange([...list, v]);
-    setDraft("");
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : "";
+      if (dataUrl) {
+        onChange([...list, dataUrl]);
+        onMainImageChange?.(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const remove = (idx) => onChange(list.filter((_, i) => i !== idx));
@@ -123,14 +131,10 @@ function GalleryEditor({ gallery, onChange }) {
         </div>
       )}
       <div className="admin-repeatable-row">
-        <input
-          className="admin-input"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder="https://... (URL รูปเพิ่มเติม)"
-        />
-        <button type="button" className="admin-add-row-btn" onClick={add}>+ เพิ่มรูป</button>
+        <label className="admin-add-row-btn" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          + เลือกรูปจากเครื่อง
+          <input type="file" accept="image/*" onChange={handleFileSelect} style={{ display: "none" }} />
+        </label>
       </div>
     </div>
   );
@@ -269,7 +273,13 @@ export default function AddEditProduct() {
   useEffect(() => {
     if (id) {
       const p = getProductById(id);
-      if (p) setProduct(p);
+      if (p) {
+        setProduct({
+          ...p,
+          store: "Maison Véra",
+          brand: "Maison Véra",
+        });
+      }
     }
   }, [id]);
 
@@ -321,6 +331,8 @@ export default function AddEditProduct() {
       const seoUrl = product.seo?.urlSlug || slugify(product.name);
       const payload = {
         ...product,
+        store: "Maison Véra",
+        brand: "Maison Véra",
         seo: { ...(product.seo || {}), urlSlug: seoUrl, metaTitle: product.seo?.metaTitle || product.name },
         status: draft ? "Draft" : product.status === "Draft" ? "Pending" : product.status || "Active",
         tags: product.tags || [],
@@ -378,31 +390,33 @@ export default function AddEditProduct() {
               onChange={(e) => set({ name: e.target.value, seo: { ...(product.seo || {}), urlSlug: product.seo?.urlSlug ? product.seo.urlSlug : slugify(e.target.value) } })}
             />
           </Field>
-          <Field label="ชื่ออังกฤษ">
-            <input className="admin-input" value={product.enName} onChange={(e) => set({ enName: e.target.value })} />
-          </Field>
           <Field label="คำอธิบายสั้น" >
             <input className="admin-input" value={product.descriptionShort} onChange={(e) => set({ descriptionShort: e.target.value })} />
           </Field>
           <Field label="หมวดหมู่" error={errors.category}>
-            <input className={"admin-input" + (errors.category ? " admin-field-error" : "")} value={product.category} onChange={(e) => set({ category: e.target.value })} />
+            <select
+              className={"admin-select" + (errors.category ? " admin-field-error" : "")}
+              value={product.category || ""}
+              onChange={(e) => set({ category: e.target.value })}
+            >
+              <option value="">-- เลือกหมวดหมู่ --</option>
+              <option value="สกินแคร์">สกินแคร์</option>
+              <option value="เมคอัพ">เมคอัพ</option>
+            </select>
           </Field>
           <Field label="ร้านค้า">
-            <input className="admin-input" value={product.store} onChange={(e) => set({ store: e.target.value })} />
+            <input className="admin-input" value={product.store || "Maison Véra"} readOnly />
           </Field>
           <Field label="แบรนด์">
-            <input className="admin-input" value={product.brand} onChange={(e) => set({ brand: e.target.value })} />
+            <input className="admin-input" value={product.brand || "Maison Véra"} readOnly />
           </Field>
-          <Field label="ประเทศแหล่งกำเนิด">
+          {/* <Field label="ประเทศแหล่งกำเนิด">
             <input className="admin-input" value={product.countryOfOrigin || ""} onChange={(e) => set({ countryOfOrigin: e.target.value })} />
-          </Field>
-          <Field label="ผู้ผลิต">
+          </Field> */}
+          {/* <Field label="ผู้ผลิต">
             <input className="admin-input" value={product.manufacturer || ""} onChange={(e) => set({ manufacturer: e.target.value })} />
-          </Field>
-          <Field label="รายละเอียดสินค้า">
-            <textarea className="admin-textarea" rows={4} value={product.details || ""} onChange={(e) => set({ details: e.target.value })} />
-          </Field>
-          <Field label="จุดเด่นสินค้า (แยกบรรทัด)">
+          </Field> */}
+          <Field label="คุณสมบัติ (แยกบรรทัด)">
             <textarea className="admin-textarea" rows={4} value={product.highlights || ""} onChange={(e) => set({ highlights: e.target.value })} />
           </Field>
         </div>
@@ -435,7 +449,11 @@ export default function AddEditProduct() {
           </Field>
         </div>
         <div className="admin-field-label" style={{ marginBottom: 8 }}>คลังรูปเพิ่มเติม (Gallery)</div>
-        <GalleryEditor gallery={product.gallery} onChange={(gallery) => set({ gallery })} />
+        <GalleryEditor
+          gallery={product.gallery}
+          onChange={(gallery) => set({ gallery })}
+          onMainImageChange={(url) => set({ mainImage: url })}
+        />
 
         {/* Price */}
         <SectionTitle>ราคาและต้นทุน</SectionTitle>
@@ -468,39 +486,39 @@ export default function AddEditProduct() {
           <Field label="SKU" error={errors.sku}>
             <input className={"admin-input" + (errors.sku ? " admin-field-error" : "")} value={product.sku || ""} onChange={(e) => set({ sku: e.target.value })} />
           </Field>
-          <Field label="Barcode">
+          {/* <Field label="Barcode">
             <input className="admin-input" value={product.barcode || ""} onChange={(e) => set({ barcode: e.target.value })} />
-          </Field>
+          </Field> */}
           <Field label="จำนวน">
             <input className="admin-input" type="number" value={product.stockTotal ?? 0} onChange={(e) => set({ stockTotal: Number(e.target.value) })} />
           </Field>
-          <Field label="Reserved Stock">
+          {/* <Field label="Reserved Stock">
             <input className="admin-input" type="number" value={product.reservedStock ?? 0} onChange={(e) => set({ reservedStock: Number(e.target.value) })} />
-          </Field>
+          </Field> */}
           <Field label="แจ้งเตือนเมื่อสต็อกต่ำกว่า">
             <input className="admin-input" type="number" value={product.lowStockThreshold ?? 0} onChange={(e) => set({ lowStockThreshold: Number(e.target.value) })} />
           </Field>
         </div>
-        <div className="admin-field-label" style={{ margin: "12px 0 8px" }}>คลังสินค้าแยกตามสาขา</div>
-        <WarehousesEditor warehouses={product.warehouses} onChange={(warehouses) => set({ warehouses })} />
+        {/* <div className="admin-field-label" style={{ margin: "12px 0 8px" }}>คลังสินค้าแยกตามสาขา</div>
+        <WarehousesEditor warehouses={product.warehouses} onChange={(warehouses) => set({ warehouses })} /> */}
 
         {/* Variants */}
-        <SectionTitle hint="ไม่บังคับ — เว้นว่างได้ถ้าสินค้าขายเป็นรายการเดียว">ตัวเลือกสินค้าและ Variant</SectionTitle>
+        {/* <SectionTitle hint="ไม่บังคับ — เว้นว่างได้ถ้าสินค้าขายเป็นรายการเดียว">ตัวเลือกสินค้าและ Variant</SectionTitle>
         <VariantsEditor
           variantOptions={product.variantOptions}
           variants={product.variants}
           onOptionsChange={(variantOptions) => set({ variantOptions })}
           onVariantsChange={(variants) => set({ variants })}
-        />
+        /> */}
 
         {/* Attributes */}
-        <SectionTitle hint="ไม่บังคับ">คุณสมบัติเพิ่มเติม</SectionTitle>
-        <AttributesEditor attributes={product.attributes} onChange={(attributes) => set({ attributes })} />
+        {/* <SectionTitle hint="ไม่บังคับ">คุณสมบัติเพิ่มเติม</SectionTitle>
+        <AttributesEditor attributes={product.attributes} onChange={(attributes) => set({ attributes })} /> */}
 
         {/* Shipping */}
         <SectionTitle>การจัดส่ง</SectionTitle>
         <div className="admin-form-grid is-4">
-          <Field label="น้ำหนัก (กก.)">
+          <Field label="น้ำหนัก (กรัม)">
             <input className="admin-input" type="number" value={product.shipping?.weightKg ?? 0} onChange={(e) => setShipping({ weightKg: Number(e.target.value) })} />
           </Field>
           <Field label="กว้าง (ซม.)">
@@ -536,7 +554,7 @@ export default function AddEditProduct() {
         </div>
 
         {/* SEO */}
-        <SectionTitle>SEO</SectionTitle>
+        {/* <SectionTitle>SEO</SectionTitle>
         <div className="admin-form-grid">
           <Field label="Meta Title">
             <input className="admin-input" value={product.seo?.metaTitle || ""} onChange={(e) => setSeo({ metaTitle: e.target.value })} />
@@ -554,7 +572,7 @@ export default function AddEditProduct() {
               <input className="admin-input" value={product.seo?.keywords || ""} onChange={(e) => setSeo({ keywords: e.target.value })} />
             </Field>
           </div>
-        </div>
+        </div> */}
 
         {/* Activity logs */}
         <SectionTitle>ประวัติการแก้ไข (Activity Logs)</SectionTitle>
@@ -578,10 +596,10 @@ export default function AddEditProduct() {
 
         {/* Sticky save bar */}
         <div className="admin-save-bar">
-          <div style={{ flex: 1, minWidth: 220 }}>
+          {/* <div style={{ flex: 1, minWidth: 220 }}>
             <div className="admin-field-label" style={{ marginBottom: 6 }}>บันทึกเพิ่มเติมสำหรับ Activity Log (ไม่บังคับ)</div>
             <input className="admin-input" value={saveNote} onChange={(e) => setSaveNote(e.target.value)} placeholder="เช่น ปรับราคาตามโปรโมชั่นเดือนนี้" />
-          </div>
+          </div> */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
             {saveError && <div className="admin-save-status is-error">{saveError}</div>}
             <div className="admin-header-actions">
