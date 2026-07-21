@@ -3,6 +3,7 @@ import { computeDashboardStats, listProducts } from "./productsDataStore";
 import "./adminProducts.css";
 import AdminHeader from "./AdminHeader";
 
+
 // 🧩 StatCard — one clickable KPI tile. `tone` just recolors the number
 // (default / warning / alert) so problem-counts (no image, incomplete,
 // out of stock) read differently from healthy counts at a glance.
