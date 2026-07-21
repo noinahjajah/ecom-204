@@ -1,30 +1,23 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "./supabaseClient";
+import React from "react";
+import { useAuth } from "./AuthContext";
 import "./Login.css";
 
 export default function Account() {
-  const [user, setUser] = useState(null);
-  const [checking, setChecking] = useState(true);
+  const { user, loading, logout } = useAuth();
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
-        window.location.href = "/login";
-        return;
-      }
-      setUser(data.session.user);
-      setChecking(false);
-    });
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/";
-  };
-
-  if (checking) {
+  if (loading) {
     return <p style={{ textAlign: "center", padding: "4rem" }}>กำลังโหลด...</p>;
   }
+
+  if (!user) {
+    window.location.href = "/login";
+    return null;
+  }
+
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = "/";
+  };
 
   const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
   const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email;

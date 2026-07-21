@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
+import { useAuth } from "./AuthContext";
 
 // Admin emails จำลอง (สำหรับ mock mode)
 const MOCK_ADMIN_EMAILS = ["admin@maisonvera.com"];
 
 export default function AuthCallback() {
   const [status, setStatus] = useState("loading"); // loading | error
+  const { refreshSession } = useAuth();
 
   useEffect(() => {
     // เช็คเผื่อไว้ ในกรณีที่ Parameter ไม่ถูกตัด หรือหลุดไปอยู่ใน Hash
-    const isAdminIntent = window.location.href.includes("admin=1") || window.location.href.includes("admin=1");
+    const isAdminIntent = window.location.href.includes("admin=1");
 
     supabase.auth.getSession().then(async ({ data, error }) => {
       if (error || !data.session) {
@@ -24,6 +26,9 @@ export default function AuthCallback() {
 
       // Mock: ตรวจสอบ admin จากรายการที่กำหนดไว้
       const isAdmin = MOCK_ADMIN_EMAILS.includes(userEmail);
+
+      // Refresh session ใน auth context
+      await refreshSession();
 
       // 1. ถ้าคนนี้คือ Admin ให้ไปหน้า Dashboard เสมอ
       if (isAdmin) {

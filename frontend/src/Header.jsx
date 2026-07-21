@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from "react";
 import "./Header.css";
 import { getCartCount, subscribeCart } from "./cart";
+import { useAuth } from "./AuthContext";
 
 const defaultLinks = [
+  { label: "หน้าแรก", href: "/" },
+  { label: "สกินแคร์", href: "/skincare" },
+  { label: "เครื่องสำอาง", href: "/makeup" },
+  { label: "เกี่ยวกับเรา", href: "/about" },
+];
+
+const defaultLinksAdmin = [
   { label: "หน้าแรก", href: "/" },
   { label: "สกินแคร์", href: "/skincare" },
   { label: "เครื่องสำอาง", href: "/makeup" },
@@ -10,7 +18,9 @@ const defaultLinks = [
   { label: "Admin", href: "/admin/orders" },
 ];
 
-export default function Header({ links = defaultLinks, accountHref = "/login", cartHref = "/cart", basePath = "" }) {
+export default function Header({ links: propLinks, accountHref = "/login", cartHref = "/cart", basePath = "" }) {
+  const { isAdmin } = useAuth();
+  const links = propLinks || (isAdmin ? defaultLinksAdmin : defaultLinks);
   const [cartCount, setCartCount] = useState(() => getCartCount());
 
   useEffect(() => {

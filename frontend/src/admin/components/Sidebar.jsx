@@ -1,9 +1,11 @@
 import React from "react";
+import { useAuth } from "../../AuthContext";
 
 export default function Sidebar({ active }) {
-  const handleLogout = () => {
-    localStorage.removeItem("session");
-    localStorage.removeItem("token");
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
     window.location.href = "/";
   };
 
