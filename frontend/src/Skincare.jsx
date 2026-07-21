@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import "./Skincare.css";
 import Header from "./Header";
 import { addToCart, slugify } from "./cart";
-import { listProducts } from "./admin-products/productsDataStore";
+import { isProductAvailable, listProducts } from "./admin-products/productsDataStore";
 /**
  * Skincare — หน้าหมวดสกินแคร์ เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra
  * ธีม: White Luxury (ivory / ink / muted gold / sage)
@@ -198,7 +198,7 @@ export default function Skincare() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    const allProducts = listProducts().filter((p) => p.category === "สกินแคร์");
+    const allProducts = listProducts().filter((p) => p.category === "สกินแคร์" && isProductAvailable(p));
     setProducts(allProducts);
   }, []);
 
@@ -219,7 +219,7 @@ export default function Skincare() {
 
   const displayProducts = useMemo(() => {
     const source = products.length > 0 ? products : PRODUCTS;
-    return source.map((product) => {
+    return source.filter((product) => isProductAvailable(product)).map((product) => {
       if (product?.name && (product?.descriptionShort || product?.desc)) {
         return normalizeSkincareProduct(product);
       }

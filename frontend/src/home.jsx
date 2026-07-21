@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./home.css";
 import Header from "./Header";
 import { addToCart, slugify } from "./cart";
+import { isProductAvailable, listProducts } from "./admin-products/productsDataStore";
 
 /**
  * Home — หน้าแรกเว็บอีคอมเมิร์ซเครื่องสำอาง
@@ -87,8 +88,34 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [justAdded, setJustAdded] = useState(null);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const allProducts = listProducts().filter((p) => isProductAvailable(p));
+    setProducts(allProducts);
+  }, []);
+
+  const displayProducts = useMemo(() => {
+    const source = products.length > 0 ? products : PRODUCTS;
+    return source.filter((product) => isProductAvailable(product)).map((product) => {
+      if (product?.name && (product?.descriptionShort || product?.desc)) {
+        return {
+          id: product.id || slugify(product.name),
+          name: product.name,
+          desc: product.descriptionShort || product.desc || "",
+          price: product.price ?? 0,
+          oldPrice: product.promoPrice ?? null,
+          tag: product.tags?.[0] || null,
+          img: product.mainImage || product.gallery?.[0] || product.img || "https://placehold.co/500x625/ffffff/ad8a55?text=Product",
+        };
+      }
+      return product;
+    });
+  }, [products]);
 
   const handleAddToCart = (p) => {
+    if (!isProductAvailable(p)) return;
+
     addToCart({
       id: slugify(p.name),
       name: p.name,
@@ -158,7 +185,7 @@ export default function Home() {
           <a href="#all" className="section-link">Best seller</a>
         </div>
         <div className="product-grid">
-          {PRODUCTS.map((p) => (
+          {displayProducts.map((p) => (
             <div className="product-card" key={p.name}>
               <a
                 className="product-card-link"

@@ -263,6 +263,34 @@ export function ensureSeeded() {
   return seed;
 }
 
+export function isProductAvailable(product) {
+  if (!product) return false;
+
+  const stockValue = product.stockTotal ?? product.stock;
+  if (stockValue === null || stockValue === undefined || stockValue === "") {
+    return true;
+  }
+
+  const stock = Number(stockValue);
+  if (!Number.isFinite(stock)) {
+    return true;
+  }
+
+  if (stock > 0) {
+    return true;
+  }
+
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  if (variants.length > 0) {
+    return variants.some((variant) => {
+      const variantStock = Number(variant?.stock ?? 0);
+      return Number.isFinite(variantStock) && variantStock > 0;
+    });
+  }
+
+  return false;
+}
+
 export function listProducts() {
   const all = ensureSeeded();
   return all;

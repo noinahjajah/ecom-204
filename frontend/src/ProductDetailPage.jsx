@@ -3,7 +3,7 @@ import "./ProductDetailPage.css";
 import Header from "./Header";
 import { addToCart, parsePrice, slugify } from "./cart";
 import { getProductById as getFallbackProductById, getRelatedProducts as getFallbackRelatedProducts } from "./productData";
-import { listProducts } from "./admin-products/productsDataStore";
+import { isProductAvailable, listProducts } from "./admin-products/productsDataStore";
 
 const fallbackReviews = [
   {
@@ -86,6 +86,7 @@ function normalizeProductForDetail(product) {
     relatedIds: product.relatedIds || [],
     store: product.store || "",
     brand: product.brand || "",
+    inStock: isProductAvailable(product),
   };
 }
 
@@ -134,7 +135,7 @@ export default function ProductDetailPage() {
   const [justAdded, setJustAdded] = useState(false);
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || !product.inStock) return;
 
     addToCart({
       id: product.id,
@@ -205,6 +206,12 @@ export default function ProductDetailPage() {
 
             <p className="pdp-desc">{product.desc}</p>
 
+            {!product.inStock && (
+              <div className="pdp-stock-out" style={{ marginBottom: 12, color: "#8b4a2b", fontWeight: 600 }}>
+                สินค้าหมดชั่วคราว และถูกลบออกจากตะกร้าอัตโนมัติแล้ว
+              </div>
+            )}
+
             {product.features?.length > 0 && (
               <div className="pdp-features">
                 <h3>คุณสมบัติ</h3>
@@ -242,10 +249,10 @@ export default function ProductDetailPage() {
             )}
 
             <div className="pdp-actions">
-              <button className="btn-ghost" onClick={handleAddToCart}>
-                {justAdded ? "เพิ่มแล้ว ✓" : "เพิ่มลงตะกร้า"}
+              <button className="btn-ghost" onClick={handleAddToCart} disabled={!product.inStock}>
+                {product.inStock ? (justAdded ? "เพิ่มแล้ว ✓" : "เพิ่มลงตะกร้า") : "สินค้าหมด"}
               </button>
-              <button className="btn-primary" onClick={handleBuyNow}>
+              <button className="btn-primary" onClick={handleBuyNow} disabled={!product.inStock}>
                 ซื้อทันที
               </button>
             </div>

@@ -7,6 +7,8 @@
  * และ CartPage (แสดง/แก้ไขรายการจริง)
  */
 
+import { isProductAvailable, listProducts } from "./admin-products/productsDataStore";
+
 const CART_KEY = "mv_cart";
 const EVENT_NAME = "cartchange";
 
@@ -26,6 +28,50 @@ function writeCart(cart) {
   window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: cart }));
 }
 
+function findMatchingProduct(item, products = listProducts()) {
+  if (!item) return null;
+
+  const byId = products.find((product) => product.id === item.id);
+  if (byId) return byId;
+
+  const name = String(item.name || "");
+  return (
+    products.find((product) => slugify(product.name || "") === slugify(name)) ||
+    products.find((product) => product.sku === item.sku) ||
+    null
+  );
+}
+
+function isCartItemAvailable(item, products = listProducts()) {
+  const product = findMatchingProduct(item, products);
+  if (!product) return true;
+
+  const stockValue = product.stockTotal ?? product.stock;
+  if (stockValue === null || stockValue === undefined || stockValue === "") return true;
+
+  const stock = Number(stockValue);
+  if (!Number.isFinite(stock)) return true;
+  if (stock > 0) return true;
+
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  if (variants.length > 0) {
+    return variants.some((variant) => {
+      const variantStock = Number(variant?.stock ?? 0);
+      return Number.isFinite(variantStock) && variantStock > 0;
+    });
+  }
+
+  return false;
+}
+
+function syncCartWithStock(cart = readCart()) {
+  const filtered = cart.filter((item) => isCartItemAvailable(item));
+  if (filtered.length !== cart.length) {
+    writeCart(filtered);
+  }
+  return filtered;
+}
+
 /** แปลงชื่อสินค้าเป็น id ที่คงที่ (ใช้เมื่อสินค้าไม่มี id ของตัวเอง) */
 export function slugify(name) {
   return name
@@ -42,11 +88,11 @@ export function parsePrice(price) {
 }
 
 export function getCart() {
-  return readCart();
+  return syncCartWithStock();
 }
 
 export function getCartCount() {
-  return readCart().reduce((n, item) => n + item.qty, 0);
+  return getCart().reduce((n, item) => n + item.qty, 0);
 }
 
 /**
@@ -54,7 +100,11 @@ export function getCartCount() {
  * product: { id, name, category, variant, price, image }
  */
 export function addToCart(product, qty = 1) {
-  const cart = readCart();
+  if (!isCartItemAvailable(product)) {
+    return getCart();
+  }
+
+  const cart = getCart();
   const existing = cart.find(
     (item) => item.id === product.id && item.variant === product.variant
   );
@@ -76,7 +126,7 @@ export function addToCart(product, qty = 1) {
 }
 
 export function updateQty(id, delta) {
-  const cart = readCart().map((item) =>
+  const cart = getCart().map((item) =>
     item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
   );
   writeCart(cart);
@@ -84,7 +134,7 @@ export function updateQty(id, delta) {
 }
 
 export function setQty(id, qty) {
-  const cart = readCart().map((item) =>
+  const cart = getCart().map((item) =>
     item.id === id ? { ...item, qty: Math.max(1, qty) } : item
   );
   writeCart(cart);
@@ -92,7 +142,7 @@ export function setQty(id, qty) {
 }
 
 export function removeFromCart(id) {
-  const cart = readCart().filter((item) => item.id !== id);
+  const cart = getCart().filter((item) => item.id !== id);
   writeCart(cart);
   return cart;
 }
