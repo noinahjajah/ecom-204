@@ -20,10 +20,10 @@
 //    "Upsert product" string.
 // ─────────────────────────────────────────────────────────────
 import React, { useEffect, useMemo, useState } from "react";
-import Header from "../Header";
+import AdminHeader from "./AdminHeader";
 import { getProductById, upsertProduct } from "./productsDataStore";
 import { slugify } from "./productsUtils";
-import "./adminProducts.css";
+
 
 function getIdFromQuery() {
   const sp = new URLSearchParams(window.location.search);
@@ -280,7 +280,7 @@ export default function AddEditProduct() {
   if (!product) {
     return (
       <div className="admin-wrap">
-        <Header />
+        <AdminHeader />
         <div className="admin-page admin-form-shell">
           <h1 className="admin-h1">ไม่พบสินค้า</h1>
           <button className="btn-primary" onClick={backToTable} style={{ cursor: "pointer", marginTop: 12 }}>กลับ</button>
@@ -350,7 +350,7 @@ export default function AddEditProduct() {
 
   return (
     <div className="admin-wrap">
-      <Header />
+      <AdminHeader />
       <div className="admin-page admin-form-shell">
         <div className="admin-header-row">
           <div>

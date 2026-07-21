@@ -83,7 +83,7 @@ import "./adminProducts.css";
 import { supabase } from "../supabaseClient";
 
 const defaultLinks = [
-  { label: "Dashboard", href: "/admin/products.html" },
+  { label: "Dashboard", href: "/admin/dashboard" },
   { label: "สินค้าทั้งหมด", href: "/admin/products.html?status=" },
   { label: "เพิ่มสินค้า", href: "/admin/products/new.html" },
 ];

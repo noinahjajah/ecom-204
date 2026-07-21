@@ -48,9 +48,6 @@ export default function ProductsDashboard() {
             <div className="admin-eyebrow">Admin • Product Management</div>
             <h1 className="admin-h1">Dashboard สินค้า</h1>
           </div>
-          <a className="btn-primary" href="/admin/products/new.html" style={{ textDecoration: "none" }}>
-            เพิ่มสินค้า
-          </a>
         </div>
 
         <div className="admin-stat-grid">

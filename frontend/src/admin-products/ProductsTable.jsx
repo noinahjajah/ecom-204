@@ -19,10 +19,9 @@
 //    UI, so on a slow store swap this would need a loading state.
 // ─────────────────────────────────────────────────────────────
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Header from "../Header";
 import { listProducts, deleteProducts, bulkUpdateProducts, exportProductsJSON, importProductsJSON } from "./productsDataStore";
 import { compareBySort, matchesSearch } from "./productsUtils";
-import "./adminProducts.css";
+import AdminHeader from "./AdminHeader";
 
 const TABLE_COLS = 17; // 👈 keep in sync with <thead> below (used for the empty-state colSpan)
 
@@ -244,7 +243,7 @@ export default function ProductsTable() {
 
   return (
     <div className="admin-wrap">
-      <Header />
+      <AdminHeader />
       <div className="admin-page">
         <div className="admin-header-row">
           <div>
