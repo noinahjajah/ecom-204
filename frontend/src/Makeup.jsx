@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import "./Makeup.css";
 import Header from "./Header";
 import { addToCart, slugify } from "./cart";
+import { listProducts } from "./admin-products/productsDataStore";
 /**
  * Makeup — หน้าหมวดเมคอัพ เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra
  * ธีม: White Luxury (ivory / ink / gold) — สีชุดเดียวกับ home.css
@@ -109,19 +110,59 @@ const PRODUCTS = [
   },
 ];
 
+const formatPrice = (value) => {
+  const numberValue = Number(value);
+  if (Number.isFinite(numberValue)) {
+    return `฿${numberValue.toLocaleString("th-TH")}`;
+  }
+  return value;
+};
+
+const inferMakeupCategory = (product) => {
+  const name = (product.name || "").toLowerCase();
+  if (name.includes("lip") || name.includes("rouge")) return "lips";
+  if (name.includes("eye") || name.includes("brow")) return "eyes";
+  if (name.includes("high") || name.includes("blush")) return "cheek";
+  return "face";
+};
+
+const normalizeMakeupProduct = (product) => {
+  const name = product.name || "";
+  const category = inferMakeupCategory(product);
+  return {
+    id: product.id || slugify(name),
+    name,
+    desc: product.descriptionShort || product.desc || "",
+    price: formatPrice(product.price ?? 0),
+    priceValue: Number(product.price || 0),
+    oldPrice: product.promoPrice ? formatPrice(product.promoPrice) : null,
+    tag: product.tags?.[0] || null,
+    category,
+    finish: product.variantOptions?.[0] || product.attributes?.[0]?.value || "",
+    img: product.mainImage || product.gallery?.[0] || product.img || "https://placehold.co/500x625/faf3ea/ad8a55?text=Product",
+  };
+};
+
 export default function Makeup() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [justAdded, setJustAdded] = useState(null);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const allProducts = listProducts().filter((p) => p.category === "เมคอัพ");
+    setProducts(allProducts);
+  }, []);
 
   const handleAddToCart = (p) => {
+    const priceValue = Number(p.priceValue ?? String(p.price || "").replace(/[^0-9.-]/g, ""));
     addToCart({
       id: slugify(p.name),
       name: p.name,
       category: "เมคอัพ",
       variant: p.finish || "",
-      price: p.price,
+      price: priceValue,
       image: p.img,
     });
     setJustAdded(p.name);
@@ -129,10 +170,20 @@ export default function Makeup() {
     handleAddToCart._t = window.setTimeout(() => setJustAdded(null), 1400);
   };
 
+  const displayProducts = useMemo(() => {
+    const source = products.length > 0 ? products : PRODUCTS;
+    return source.map((product) => {
+      if (product?.name && (product?.descriptionShort || product?.desc)) {
+        return normalizeMakeupProduct(product);
+      }
+      return product;
+    });
+  }, [products]);
+
   const filtered = useMemo(() => {
-    if (activeCategory === "all") return PRODUCTS;
-    return PRODUCTS.filter((p) => p.category === activeCategory);
-  }, [activeCategory]);
+    if (activeCategory === "all") return displayProducts;
+    return displayProducts.filter((p) => p.category === activeCategory);
+  }, [activeCategory, displayProducts]);
 
   const handleSubscribe = (e) => {
     e.preventDefault();

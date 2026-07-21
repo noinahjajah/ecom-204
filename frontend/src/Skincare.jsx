@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import "./Skincare.css";
 import Header from "./Header";
 import { addToCart, slugify } from "./cart";
+import { listProducts } from "./admin-products/productsDataStore";
 /**
  * Skincare — หน้าหมวดสกินแคร์ เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra
  * ธีม: White Luxury (ivory / ink / muted gold / sage)
@@ -144,19 +145,71 @@ const PRODUCTS = [
   },
 ];
 
+const formatPrice = (value) => {
+  const numberValue = Number(value);
+  if (Number.isFinite(numberValue)) {
+    return `฿${numberValue.toLocaleString("th-TH")}`;
+  }
+  return value;
+};
+
+const inferSkincareStep = (product) => {
+  const name = (product.name || "").toLowerCase();
+  if (name.includes("clean") || name.includes("balm")) return "cleanse";
+  if (name.includes("toner")) return "tone";
+  if (name.includes("moistur") || name.includes("cream")) return "moisturize";
+  if (name.includes("spf") || name.includes("sun")) return "protect";
+  return "treat";
+};
+
+const inferSkincareConcerns = (product) => {
+  const name = (product.name || "").toLowerCase();
+  if (name.includes("toner")) return ["sensitive", "dull"];
+  if (name.includes("serum") || name.includes("ampoule")) return ["aging", "dull"];
+  if (name.includes("moistur") || name.includes("balm")) return ["dry", "sensitive"];
+  if (name.includes("mask")) return ["oily"];
+  if (name.includes("spf") || name.includes("sun")) return ["oily", "sensitive", "dry", "aging", "dull"];
+  return ["dry", "sensitive"];
+};
+
+const normalizeSkincareProduct = (product) => {
+  const name = product.name || "";
+  const step = inferSkincareStep(product);
+  return {
+    id: product.id || slugify(name),
+    name,
+    desc: product.descriptionShort || product.desc || "",
+    price: formatPrice(product.price ?? 0),
+    priceValue: Number(product.price || 0),
+    oldPrice: product.promoPrice ? formatPrice(product.promoPrice) : null,
+    tag: product.tags?.[0] || null,
+    step,
+    concerns: inferSkincareConcerns(product),
+    ingredient: product.attributes?.[0]?.value || product.ingredient || "สูตรบำรุงจาก Maison Véra",
+    img: product.mainImage || product.gallery?.[0] || product.img || "https://placehold.co/500x625/f3ece0/9c7b4f?text=Product",
+  };
+};
+
 export default function Skincare() {
   const [activeConcern, setActiveConcern] = useState("all");
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [justAdded, setJustAdded] = useState(null);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const allProducts = listProducts().filter((p) => p.category === "สกินแคร์");
+    setProducts(allProducts);
+  }, []);
 
   const handleAddToCart = (p) => {
+    const priceValue = Number(p.priceValue ?? String(p.price || "").replace(/[^0-9.-]/g, ""));
     addToCart({
       id: slugify(p.name),
       name: p.name,
       category: "สกินแคร์",
       variant: ROUTINE.find((r) => r.key === p.step)?.title || "",
-      price: p.price,
+      price: priceValue,
       image: p.img,
     });
     setJustAdded(p.name);
@@ -164,10 +217,20 @@ export default function Skincare() {
     handleAddToCart._t = window.setTimeout(() => setJustAdded(null), 1400);
   };
 
+  const displayProducts = useMemo(() => {
+    const source = products.length > 0 ? products : PRODUCTS;
+    return source.map((product) => {
+      if (product?.name && (product?.descriptionShort || product?.desc)) {
+        return normalizeSkincareProduct(product);
+      }
+      return product;
+    });
+  }, [products]);
+
   const filtered = useMemo(() => {
-    if (activeConcern === "all") return PRODUCTS;
-    return PRODUCTS.filter((p) => p.concerns.includes(activeConcern));
-  }, [activeConcern]);
+    if (activeConcern === "all") return displayProducts;
+    return displayProducts.filter((p) => p.concerns.includes(activeConcern));
+  }, [activeConcern, displayProducts]);
 
   const handleSubscribe = (e) => {
     e.preventDefault();
