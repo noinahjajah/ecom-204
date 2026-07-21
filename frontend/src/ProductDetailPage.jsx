@@ -2,7 +2,29 @@ import React, { useMemo, useState } from "react";
 import "./ProductDetailPage.css";
 import Header from "./Header";
 import { addToCart, parsePrice, slugify } from "./cart";
-import { getProductById, getRelatedProducts } from "./productData";
+import { getProductById as getFallbackProductById, getRelatedProducts as getFallbackRelatedProducts } from "./productData";
+import { listProducts } from "./admin-products/productsDataStore";
+
+const fallbackReviews = [
+  {
+    name: "Nok",
+    rating: 5,
+    text: "เนื้อดีมาก ซึมไว ใช้แล้วผิวดูสุขภาพดีขึ้นค่ะ",
+    date: "2026-06-12",
+  },
+  {
+    name: "Pim",
+    rating: 4,
+    text: "แพ็กเกจสวยและใช้ง่าย เหมาะกับผิวแพ้ง่าย",
+    date: "2026-05-02",
+  },
+  {
+    name: "Mint",
+    rating: 5,
+    text: "กลิ่นอ่อนๆ ไม่รบกวน ผิวดูชุ่มชื้นขึ้นจริง",
+    date: "2026-04-18",
+  },
+];
 
 function formatTHB(n) {
   const num = typeof n === "number" ? n : parsePrice(n);
@@ -14,13 +36,78 @@ function getQueryParam(name) {
   return sp.get(name);
 }
 
+function normalizeProductForDetail(product) {
+  if (!product) return null;
+
+  const name = product.name || "";
+  const variantOptions = (product.variantOptions || [])
+    .map((option) => {
+      if (typeof option === "string") return option;
+      if (Array.isArray(option?.values)) return option.values;
+      if (option?.name) return option.name;
+      return null;
+    })
+    .flatMap((item) => (Array.isArray(item) ? item : [item]))
+    .filter(Boolean);
+
+  const variantFallback = (product.variants || [])
+    .map((variant) => {
+      const values = Object.values(variant?.options || {})
+        .filter(Boolean)
+        .map((value) => String(value));
+      return values.length ? values.join(" / ") : null;
+    })
+    .filter(Boolean);
+
+  const attributes = Array.isArray(product.attributes) ? product.attributes : [];
+  const features = (product.features && product.features.length > 0
+    ? product.features
+    : attributes
+        .map((attr) => `${attr.key || ""}: ${attr.value || ""}`.trim())
+        .filter(Boolean))
+    .slice(0, 4);
+
+  const ingredient = attributes.find((attr) => /ผิว|ส่วนผสม|สูตร|ingredient/i.test(attr.key || ""))?.value || product.ingredient || "";
+
+  return {
+    id: product.id || slugify(name),
+    name,
+    category: product.category || "",
+    variantOptions: variantOptions.length > 0 ? variantOptions : variantFallback,
+    variantDefault: product.variantDefault || variantOptions[0] || variantFallback[0] || null,
+    price: Number(product.price ?? 0),
+    oldPrice: product.oldPrice ?? product.promoPrice ?? null,
+    tag: product.tag || product.tags?.[0] || null,
+    image: product.mainImage || product.gallery?.[0] || product.image || "https://placehold.co/800x900/faf3ea/ad8a55?text=Product",
+    desc: product.descriptionShort || product.description || product.desc || "",
+    features,
+    ingredient,
+    reviews: product.reviews || fallbackReviews,
+    relatedIds: product.relatedIds || [],
+    store: product.store || "",
+    brand: product.brand || "",
+  };
+}
+
+function getLocalProductById(id, products) {
+  if (!id) return null;
+  const normalized = String(id).trim();
+  const byId = products.find((product) => product.id === normalized);
+  if (byId) return byId;
+  return products.find((product) => slugify(product.name || "") === slugify(normalized)) || null;
+}
+
 export default function ProductDetailPage() {
   const productId = getQueryParam("id");
+  const localProducts = useMemo(() => listProducts(), [productId]);
 
   const product = useMemo(() => {
-    // id ในระบบนี้ใช้ slugify(name) เป็นหลัก
-    return getProductById(productId) || getProductById(slugify(productId));
-  }, [productId]);
+    const localProduct = getLocalProductById(productId, localProducts) || getLocalProductById(slugify(productId), localProducts);
+    if (localProduct) return normalizeProductForDetail(localProduct);
+
+    const fallbackProduct = getFallbackProductById(productId) || getFallbackProductById(slugify(productId));
+    return normalizeProductForDetail(fallbackProduct);
+  }, [productId, localProducts]);
 
   const [selectedVariant, setSelectedVariant] = useState(() => {
     if (!product) return "";
@@ -33,7 +120,16 @@ export default function ProductDetailPage() {
     setSelectedVariant(product.variantDefault || product.variantOptions?.[0] || "");
   }, [product]);
 
-  const related = useMemo(() => getRelatedProducts(product), [product]);
+  const related = useMemo(() => {
+    if (!product) return [];
+
+    const sameCategoryProducts = localProducts.filter((item) => item.category === product.category && item.id !== product.id);
+    if (sameCategoryProducts.length > 0) {
+      return sameCategoryProducts.slice(0, 4).map((item) => normalizeProductForDetail(item));
+    }
+
+    return (getFallbackRelatedProducts(product) || []).map((item) => normalizeProductForDetail(item));
+  }, [product, localProducts]);
 
   const [justAdded, setJustAdded] = useState(false);
 
@@ -45,7 +141,7 @@ export default function ProductDetailPage() {
       name: product.name,
       category: product.category || "",
       variant: selectedVariant || "",
-      price: product.price,
+      price: Number(product.price || 0),
       image: product.image,
     });
 
