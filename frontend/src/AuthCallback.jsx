@@ -48,7 +48,10 @@ export default function AuthCallback() {
         return;
       }
 
-      window.location.href = "/";
+      // ถ้าถูกเด้งมา login ระหว่างจะไปหน้าอื่น (เช่น /checkout) ให้กลับไปหน้านั้นแทนหน้าแรก
+      const redirectTo = window.localStorage.getItem("mv_redirect_after_login");
+      window.localStorage.removeItem("mv_redirect_after_login");
+      window.location.href = redirectTo || "/";
     });
   }, []);
 

@@ -2,6 +2,10 @@ import React, { useState, useMemo, useEffect } from "react";
 import "./CartPage.css";
 import Header from "./Header";
 import { getCart, updateQty as storeUpdateQty, removeFromCart, subscribeCart } from "./cart";
+import { supabase } from "./supabaseClient";
+
+// key ที่ใช้จำหน้าที่ผู้ใช้ตั้งใจจะไป ก่อนถูกเด้งไป login (ให้ AuthCallback.jsx อ่านแล้วเด้งกลับมาที่นี่)
+const REDIRECT_AFTER_LOGIN_KEY = "mv_redirect_after_login";
 
 /**
  * CartPage — หน้าตะกร้าสินค้า เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra
@@ -132,6 +136,20 @@ export default function CartPage() {
     setCouponMsg({ text: "", type: "" });
   }
 
+  async function handleCheckout(e) {
+    e.preventDefault();
+    const { data } = await supabase.auth.getSession();
+
+    if (!data.session) {
+      // ยังไม่ login → จำไว้ว่าจะกลับมาหน้า checkout แล้วเด้งไป login ก่อน
+      window.localStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, "/checkout");
+      window.location.href = "/login";
+      return;
+    }
+
+    window.location.href = "/checkout";
+  }
+
   return (
     <div className="cart">
       <Header />
@@ -258,7 +276,7 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <a href="/checkout" className="btn-primary cart-checkout-btn">
+              <a href="/checkout" className="btn-primary cart-checkout-btn" onClick={handleCheckout}>
                 ดำเนินการชำระเงิน
               </a>
               <a href="/" className="btn-ghost cart-continue-link">
