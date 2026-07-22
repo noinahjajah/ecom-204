@@ -1,27 +1,22 @@
 /**
- * cart.js — ระบบตะกร้าสินค้าที่ใช้งานได้จริง (ไม่มี backend/router ให้ใช้ context ข้ามหน้าได้
- * เพราะแต่ละหน้าโหลดแยกกันผ่าน path จริง ๆ) จึงเก็บสถานะไว้ใน localStorage แทน
- * แล้วกระจายอีเวนต์ "cartchange" ให้ทุกคอมโพเนนต์ที่ subscribe รู้ตัวทันทีที่มีการเปลี่ยนแปลง
- *
- * ใช้ร่วมกันได้ทั้ง Header (แสดงจำนวนในตะกร้า), Skincare/Makeup/Home (ปุ่มหยิบใส่ตะกร้า)
- * และ CartPage (แสดง/แก้ไขรายการจริง)
+ * cart.js — ระบบตะกร้าสินค้าที่ใช้งานได้จริง
+ * เชื่อมต่อกับ Rouvo (CRM) และ Superbet (ขนส่ง)
  */
 
 import { isProductAvailable, listProducts, decrementStockForOrder } from "./admin-products/productsDataStore";
 
 const CART_KEY = "mv_cart";
 const EVENT_NAME = "cartchange";
-
-/* ── Coupon + ค่าส่ง (single source of truth) ──
- * ย้ายมาไว้ที่นี่ (แทนที่จะแยกกันประกาศใน CartPage.jsx / CheckoutPage.jsx) เพื่อให้ทั้ง
- * หน้าตะกร้าและหน้าชำระเงินคำนวณยอดรวม/ส่วนลด/ค่าส่งได้ตรงกันเป๊ะทุกครั้ง เพราะอ่านจาก
- * localStorage ชุดเดียวกันทั้งหมด ไม่มีการเก็บ state ซ้ำซ้อนคนละที่
- */
 const COUPON_KEY = "mv_applied_coupon";
+const ADDRESSES_KEY = "mv_saved_addresses";
+const ORDERS_KEY = "mv_orders";
+const CARDS_KEY = "mv_saved_cards";
 
+/* ── Coupons ── */
 export const coupons = {
   SAVE10: { type: "percent", value: 10, minSpend: 0, max: 300 },
   FREESHIP: { type: "free_shipping", minSpend: 0 },
+  WELCOME20: { type: "percent", value: 20, minSpend: 1000, max: 500 },
 };
 
 export const FREE_SHIPPING_THRESHOLD = 1500;
@@ -42,10 +37,7 @@ export function clearAppliedCoupon() {
   window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: readCart() }));
 }
 
-/**
- * ค่าส่งของ "สินค้าชิ้นหนึ่ง" อ่านจาก product.shipping ที่ตั้งไว้ในหน้า admin (AddEditProduct)
- * ถ้าหาไม่เจอสินค้า หรือสินค้าไม่มีข้อมูล shipping เลย ใช้ SHIPPING_FEE เป็นค่า fallback
- */
+/* ── Shipping calculation ── */
 function getItemShipping(item, products) {
   const product = findMatchingProduct(item, products);
   const shipping = product?.shipping;
@@ -57,26 +49,16 @@ function getItemShipping(item, products) {
   return { fee: Number.isFinite(fee) ? fee : SHIPPING_FEE, free: false };
 }
 
-/**
- * ค่าส่งรวมของบิล = ค่าส่งที่สูงที่สุด (max) ในบรรดาสินค้าที่ "ไม่ได้" ตั้ง freeShipping ไว้
- * ถ้าทุกชิ้นในตะกร้าเป็น freeShipping หมด → ค่าส่งบิล = 0
- */
 function computeShippingFee(cart) {
   if (cart.length === 0) return 0;
-
   const products = listProducts();
   const payableFees = cart
     .map((item) => getItemShipping(item, products))
     .filter((s) => !s.free)
     .map((s) => s.fee);
-
   return payableFees.length > 0 ? Math.max(...payableFees) : 0;
 }
 
-/**
- * คำนวณยอดรวมสินค้า / ส่วนลด / ค่าส่ง / ยอดสุทธิ จาก cart + คูปองที่ apply ไว้ใน localStorage
- * ใช้ฟังก์ชันนี้ทั้งใน CartPage และ CheckoutPage เพื่อให้ตัวเลขตรงกันเสมอ
- */
 export function computeTotals(cart, appliedCoupon = getAppliedCoupon()) {
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const c = appliedCoupon ? coupons[appliedCoupon] : null;
@@ -96,6 +78,7 @@ export function computeTotals(cart, appliedCoupon = getAppliedCoupon()) {
   return { subtotal, discount, shippingFee, total, appliedCoupon: c ? appliedCoupon : null };
 }
 
+/* ── Cart helpers ── */
 function readCart() {
   if (typeof window === "undefined") return [];
   try {
@@ -114,10 +97,8 @@ function writeCart(cart) {
 
 function findMatchingProduct(item, products = listProducts()) {
   if (!item) return null;
-
   const byId = products.find((product) => product.id === item.id);
   if (byId) return byId;
-
   const name = String(item.name || "");
   return (
     products.find((product) => slugify(product.name || "") === slugify(name)) ||
@@ -129,14 +110,11 @@ function findMatchingProduct(item, products = listProducts()) {
 function isCartItemAvailable(item, products = listProducts()) {
   const product = findMatchingProduct(item, products);
   if (!product) return true;
-
   const stockValue = product.stockTotal ?? product.stock;
   if (stockValue === null || stockValue === undefined || stockValue === "") return true;
-
   const stock = Number(stockValue);
   if (!Number.isFinite(stock)) return true;
   if (stock > 0) return true;
-
   const variants = Array.isArray(product.variants) ? product.variants : [];
   if (variants.length > 0) {
     return variants.some((variant) => {
@@ -144,19 +122,15 @@ function isCartItemAvailable(item, products = listProducts()) {
       return Number.isFinite(variantStock) && variantStock > 0;
     });
   }
-
   return false;
 }
 
 function syncCartWithStock(cart = readCart()) {
   const filtered = cart.filter((item) => isCartItemAvailable(item));
-  if (filtered.length !== cart.length) {
-    writeCart(filtered);
-  }
+  if (filtered.length !== cart.length) writeCart(filtered);
   return filtered;
 }
 
-/** แปลงชื่อสินค้าเป็น id ที่คงที่ (ใช้เมื่อสินค้าไม่มี id ของตัวเอง) */
 export function slugify(name) {
   return name
     .toLowerCase()
@@ -165,7 +139,6 @@ export function slugify(name) {
     .replace(/(^-|-$)/g, "");
 }
 
-/** แปลงราคาที่เป็น string เช่น "1,290" ให้เป็นตัวเลข */
 export function parsePrice(price) {
   if (typeof price === "number") return price;
   return Number(String(price).replace(/[^0-9.]/g, "")) || 0;
@@ -179,15 +152,8 @@ export function getCartCount() {
   return getCart().reduce((n, item) => n + item.qty, 0);
 }
 
-/**
- * เพิ่มสินค้าลงตะกร้า ถ้ามีอยู่แล้ว (id + variant ตรงกัน) จะบวกจำนวนแทนการเพิ่มรายการซ้ำ
- * product: { id, name, category, variant, price, image }
- */
 export function addToCart(product, qty = 1) {
-  if (!isCartItemAvailable(product)) {
-    return getCart();
-  }
-
+  if (!isCartItemAvailable(product)) return getCart();
   const cart = getCart();
   const existing = cart.find(
     (item) => item.id === product.id && item.variant === product.variant
@@ -236,20 +202,11 @@ export function clearCart() {
   clearAppliedCoupon();
 }
 
-/**
- * ตัดสต็อกของสินค้าตามรายการที่เพิ่งชำระเงินสำเร็จ เรียกจาก CheckoutPage.jsx
- * หลัง saveOrder สำเร็จ (ก่อนหรือหลัง clearCart ก็ได้ เพราะรับ items เป็น array ตรงๆ)
- */
 export function deductStock(items) {
   return decrementStockForOrder(items);
 }
 
-/* ── Orders ──
- * เก็บประวัติคำสั่งซื้อไว้ใน localStorage เพื่อให้ Checkout ใช้งานได้จริงแบบ end-to-end
- * (สร้างเลขออเดอร์ บันทึกสถานะ ล้างตะกร้าเมื่อจ่ายสำเร็จ) โดยไม่ต้องมี backend/DB จริง
- */
-const ORDERS_KEY = "mv_orders";
-
+/* ── Orders ── */
 export function getOrders() {
   try {
     const raw = window.localStorage.getItem(ORDERS_KEY);
@@ -267,12 +224,7 @@ export function saveOrder(order) {
   return order;
 }
 
-/* ── Saved cards ──
- * ห้ามเก็บเลขบัตรเต็มหรือ CVV เด็ดขาด (ผิดหลัก PCI-DSS) — เก็บเฉพาะข้อมูลที่แสดงผลได้อย่างปลอดภัย
- * คือ brand, เลข 4 ตัวท้าย, เดือน/ปีหมดอายุ และชื่อบนบัตร เพื่อไว้ "จำบัตร" แบบเดียวกับเว็บอีคอมเมิร์ซทั่วไป
- */
-const CARDS_KEY = "mv_saved_cards";
-
+/* ── Saved Cards ── */
 export function getSavedCards() {
   try {
     const raw = window.localStorage.getItem(CARDS_KEY);
@@ -298,13 +250,8 @@ export function removeSavedCard(id) {
   return next;
 }
 
-/* ── Saved addresses ──
- * เก็บที่อยู่จัดส่งที่บันทึกไว้ (จากหน้าโปรไฟล์ หรือตอน checkout) เพื่อให้เลือกใช้ซ้ำได้
- * โดยไม่ต้องกรอกใหม่ทุกครั้ง แบบเดียวกับที่ทำไว้กับบัตรเครดิต
- */
-const ADDRESSES_KEY = "mv_saved_addresses";
-
-export function getSavedAddresses() {
+/* ── Saved Addresses ── ปรับปรุงใหม่ พร้อม sync Rouvo ── */
+function _loadAddressesRaw() {
   try {
     const raw = window.localStorage.getItem(ADDRESSES_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -314,24 +261,214 @@ export function getSavedAddresses() {
   }
 }
 
-export function saveAddress({ label, fullName, phone, address }) {
-  const addresses = getSavedAddresses();
-  const id = `addr_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`;
-  const next = [...addresses, { id, label: label || "", fullName, phone, address }];
-  window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(next));
+export function getSavedAddresses() {
+  return _loadAddressesRaw();
+}
+
+export function loadAddresses() {
+  return _loadAddressesRaw();
+}
+
+/**
+ * บันทึกที่อยู่ + sync กับ Rouvo CRM (ถ้ามี API key)
+ */
+export async function saveAddress(addr) {
+  const addrs = _loadAddressesRaw();
+  const id = addr.id || "addr-" + Date.now().toString(36);
+  const next = { ...addr, id, updatedAt: new Date().toISOString() };
+  const exists = addrs.findIndex((a) => a.id === id);
+  if (exists >= 0) {
+    addrs[exists] = next;
+  } else {
+    addrs.push(next);
+  }
+  window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(addrs));
+  window.dispatchEvent(new CustomEvent("addresseschange", { detail: addrs }));
+
+  // 🔄 Sync กับ Rouvo CRM
+  await syncAddressWithRouvo(next);
+
   return next;
 }
 
 export function removeSavedAddress(id) {
-  const next = getSavedAddresses().filter((a) => a.id !== id);
+  const next = _loadAddressesRaw().filter((a) => a.id !== id);
   window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(next));
+  window.dispatchEvent(new CustomEvent("addresseschange", { detail: next }));
   return next;
 }
 
+export function updateSavedAddress(id, data) {
+  const addrs = _loadAddressesRaw();
+  const idx = addrs.findIndex((a) => a.id === id);
+  if (idx >= 0) {
+    addrs[idx] = { ...addrs[idx], ...data, updatedAt: new Date().toISOString() };
+    window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(addrs));
+    window.dispatchEvent(new CustomEvent("addresseschange", { detail: addrs }));
+  }
+  return addrs;
+}
+
+export function setDefaultAddress(id) {
+  const addrs = _loadAddressesRaw().map((a) => ({ ...a, isDefault: a.id === id }));
+  window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(addrs));
+  window.dispatchEvent(new CustomEvent("addresseschange", { detail: addrs }));
+  return addrs;
+}
+
+export function subscribeAddresses(callback) {
+  const handler = (e) => callback(e.detail ?? _loadAddressesRaw());
+  window.addEventListener("addresseschange", handler);
+  window.addEventListener("storage", (e) => {
+    if (!e.key || e.key === ADDRESSES_KEY) callback(_loadAddressesRaw());
+  });
+  return () => window.removeEventListener("addresseschange", handler);
+}
+
+/* ── Rouvo CRM Integration ── */
+async function syncAddressWithRouvo(address) {
+  try {
+    const rouvoKey = import.meta.env?.VITE_ROUVO_API_KEY;
+    const rouvoEndpoint = import.meta.env?.VITE_ROUVO_ENDPOINT || "https://api.rouvo.com/v1";
+    if (!rouvoKey) return;
+
+    const res = await fetch(`${rouvoEndpoint}/customers/addresses`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${rouvoKey}`,
+      },
+      body: JSON.stringify({
+        address_id: address.id,
+        name: address.fullName || address.name,
+        phone: address.phone,
+        email: address.email,
+        line1: address.address || address.line1,
+        city: address.district || address.city,
+        state: address.province || address.state,
+        postal_code: address.postcode,
+        country: "TH",
+        preferred_carrier: address.preferredCarrier || "superbet",
+        is_default: address.isDefault || false,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Rouvo sync failed: ${res.status}`);
+  } catch (err) {
+    console.warn("[Rouvo] Address sync failed (non-critical):", err.message);
+  }
+}
+
 /**
- * subscribeCart(cb) — สมัครรับการแจ้งเตือนเมื่อตะกร้าเปลี่ยน (ทั้งในแท็บเดียวกันและข้ามแท็บ)
- * คืนค่าฟังก์ชันสำหรับ unsubscribe (ใช้ใน useEffect cleanup)
+ * สร้างออเดอร์ใน Rouvo CRM
  */
+export async function createRouvoOrder(orderData) {
+  try {
+    const rouvoKey = import.meta.env?.VITE_ROUVO_API_KEY;
+    const rouvoEndpoint = import.meta.env?.VITE_ROUVO_ENDPOINT || "https://api.rouvo.com/v1";
+    if (!rouvoKey) return null;
+
+    const res = await fetch(`${rouvoEndpoint}/orders`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${rouvoKey}`,
+      },
+      body: JSON.stringify({
+        order_id: orderData.id,
+        customer_email: orderData.customerEmail,
+        customer_name: orderData.customerName,
+        items: orderData.items,
+        subtotal: orderData.subtotal,
+        discount: orderData.discount,
+        shipping_fee: orderData.shippingFee,
+        total: orderData.total,
+        status: orderData.status,
+        payment_method: orderData.paymentMethod,
+        shipping_address: orderData.shippingAddress,
+        carrier: orderData.carrier || "superbet",
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Rouvo order failed: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn("[Rouvo] Order sync failed (non-critical):", err.message);
+    return null;
+  }
+}
+
+/* ── Superbet Tracking ── */
+/**
+ * สร้างเลข tracking กับ Superbet และคืน URL สำหรับติดตาม
+ */
+export async function createSuperbetTracking(orderData) {
+  try {
+    const superbetKey = import.meta.env?.VITE_SUPERBET_API_KEY;
+    const superbetEndpoint = import.meta.env?.VITE_SUPERBET_ENDPOINT || "https://api.superbet.com/v1";
+    if (!superbetKey) return null;
+
+    const res = await fetch(`${superbetEndpoint}/shipments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${superbetKey}`,
+      },
+      body: JSON.stringify({
+        order_id: orderData.id,
+        recipient: {
+          name: orderData.shippingAddress?.fullName,
+          phone: orderData.shippingAddress?.phone,
+          address: orderData.shippingAddress?.address,
+          district: orderData.shippingAddress?.district,
+          province: orderData.shippingAddress?.province,
+          postcode: orderData.shippingAddress?.postcode,
+        },
+        items: orderData.items.map((item) => ({
+          name: item.name,
+          qty: item.qty,
+          value: item.price,
+        })),
+        cod_amount: orderData.total,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Superbet tracking failed: ${res.status}`);
+    const data = await res.json();
+    return {
+      trackingNumber: data.tracking_number,
+      trackingUrl: data.tracking_url || `https://superbet.com/track?code=${data.tracking_number}`,
+      carrier: "Superbet Express",
+      estimatedDelivery: data.estimated_delivery,
+    };
+  } catch (err) {
+    console.warn("[Superbet] Tracking creation failed (non-critical):", err.message);
+    return null;
+  }
+}
+
+/**
+ * ดึงสถานะพัสดุจาก Superbet
+ */
+export async function getSuperbetStatus(trackingNumber) {
+  try {
+    const superbetKey = import.meta.env?.VITE_SUPERBET_API_KEY;
+    const superbetEndpoint = import.meta.env?.VITE_SUPERBET_ENDPOINT || "https://api.superbet.com/v1";
+    if (!superbetKey || !trackingNumber) return null;
+
+    const res = await fetch(`${superbetEndpoint}/shipments/${trackingNumber}/status`, {
+      headers: { "Authorization": `Bearer ${superbetKey}` },
+    });
+
+    if (!res.ok) throw new Error(`Superbet status failed: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn("[Superbet] Status check failed:", err.message);
+    return null;
+  }
+}
+
+/* ── Cart Subscription ── */
 export function subscribeCart(callback) {
   const handleCustom = (e) => callback(e.detail ?? readCart());
   const handleStorage = (e) => {

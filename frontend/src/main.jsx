@@ -9,6 +9,7 @@ import Makeup from './Makeup';
 import Skincare from './Skincare';
 import OrdersPage from './OrdersPage';
 import ProductDetailPage from './ProductDetailPage';
+import MyAddresses from './MyAddresses';
 import ProductsDashboard from './admin-products/ProductsDashboard';
 import ProductsTable from './admin-products/ProductsTable';
 import AddEditProduct from './admin-products/AddEditProduct';
@@ -35,19 +36,21 @@ const route =
                 ? "orders"
                 : pathname === "/product" || pathname === "/product.html"
                   ? "product"
-                  : pathname === "/auth/callback"
-                    ? "authCallback"
-                    : pathname === "/admin/login"
-                      ? "adminLogin"
-                      : pathname === "/admin" || pathname === "/admin/dashboard"
-                        ? "adminDashboard"
-                        : pathname === "/admin/products" || pathname === "/admin/products.html"
-                          ? "adminProducts"
-                          : pathname === "/admin/products/new" || pathname === "/admin/products/new.html"
-                            ? "adminProductsNew"
-                            : pathname === "/admin/products/edit" || pathname === "/admin/products/edit.html"
-                              ? "adminProductsEdit"
-                              : "home";
+                  : pathname === "/myaddresses"
+                    ? "myaddresses"
+                    : pathname === "/auth/callback"
+                      ? "authCallback"
+                      : pathname === "/admin/login"
+                        ? "adminLogin"
+                        : pathname === "/admin" || pathname === "/admin/dashboard"
+                          ? "adminDashboard"
+                          : pathname === "/admin/products" || pathname === "/admin/products.html"
+                            ? "adminProducts"
+                            : pathname === "/admin/products/new" || pathname === "/admin/products/new.html"
+                              ? "adminProductsNew"
+                              : pathname === "/admin/products/edit" || pathname === "/admin/products/edit.html"
+                                ? "adminProductsEdit"
+                                : "home";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -67,6 +70,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <OrdersPage />
     ) : route === "product" ? (
       <ProductDetailPage />
+    ) : route === "myaddresses" ? (
+      <MyAddresses />
     ) : route === "authCallback" ? (
       <AuthCallback />
     ) : route === "adminLogin" ? (
