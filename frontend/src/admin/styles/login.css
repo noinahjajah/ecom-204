@@ -5,6 +5,7 @@
   justify-content: center;
   background: #fbfaf8;
   font-family: "Inter", sans-serif;
+  padding: 20px;
 }
 
 .admin-login-card {
@@ -56,6 +57,140 @@
   margin: 0 0 36px;
 }
 
+/* Error Toast */
+.admin-toast-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fdf0ef;
+  border: 1px solid #e8b4b0;
+  color: #a24b3f;
+  padding: 12px 14px;
+  font-size: 0.84rem;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+/* Form Fields */
+.admin-login-form {
+  margin-bottom: 20px;
+}
+
+.admin-field {
+  position: relative;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.admin-field label {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(36, 31, 26, 0.5);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.admin-field-input-row {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(36, 31, 26, 0.12);
+  border-radius: 10px;
+  padding: 4px 14px;
+  transition: border-color 0.3s ease;
+  background: #fbfaf8;
+}
+
+.admin-field-input-row:focus-within {
+  border-color: #a3824c;
+}
+
+.admin-field input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.92rem;
+  color: #241f1a;
+  padding: 10px 0;
+}
+
+.admin-field input::placeholder {
+  color: #c7bfb3;
+}
+
+.admin-field-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(36, 31, 26, 0.4);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  transition: color 0.25s ease;
+}
+
+.admin-field-toggle:hover {
+  color: #a3824c;
+}
+
+/* Primary Button */
+.admin-login-btn-primary {
+  width: 100%;
+  background: #241f1a;
+  color: #fbfaf8;
+  border: 1px solid #241f1a;
+  padding: 15px;
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-top: 8px;
+}
+
+.admin-login-btn-primary:hover {
+  background: transparent;
+  color: #241f1a;
+}
+
+.admin-login-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-login-btn-primary:disabled:hover {
+  background: #241f1a;
+  color: #fbfaf8;
+}
+
+/* Divider */
+.admin-divider-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 24px 0;
+  color: rgba(36, 31, 26, 0.35);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-divider-row::before,
+.admin-divider-row::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(36, 31, 26, 0.1);
+}
+
+/* Google Button */
 .admin-login-btn-google {
   width: 100%;
   display: flex;
@@ -79,5 +214,26 @@
 .admin-login-btn-google:hover {
   background: transparent;
   color: #241f1a;
+}
+
+.admin-login-btn-google:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Spinner */
+.admin-login-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: admin-spin 0.6s linear infinite;
+}
+
+@keyframes admin-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 

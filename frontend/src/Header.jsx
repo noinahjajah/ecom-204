@@ -18,9 +18,13 @@ const defaultLinksAdmin = [
   { label: "Admin", href: "/admin/orders" },
 ];
 
-export default function Header({ links: propLinks, accountHref = "/login", cartHref = "/cart", basePath = "" }) {
-  const { isAdmin } = useAuth();
+export default function Header({ links: propLinks, accountHref, cartHref = "/cart", basePath = "" }) {
+  const { user, isAdmin } = useAuth();
   const links = propLinks || (isAdmin ? defaultLinksAdmin : defaultLinks);
+
+  // Dynamic account link: if logged in go to /account, else /login
+  const finalAccountHref = accountHref || (user ? "/account" : "/login");
+
   const [cartCount, setCartCount] = useState(() => getCartCount());
 
   useEffect(() => {
@@ -61,7 +65,7 @@ export default function Header({ links: propLinks, accountHref = "/login", cartH
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </button>
-          <a className="icon-btn" aria-label="บัญชีของฉัน" href={accountHref}>
+          <a className="icon-btn" aria-label="บัญชีของฉัน" href={finalAccountHref}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
               <circle cx="12" cy="8" r="4" />
               <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />

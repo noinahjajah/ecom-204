@@ -479,6 +479,18 @@
   margin-bottom: 28px;
 }
 
+.toast-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fdf0ef;
+  border: 1px solid #e8b4b0;
+  color: #a24b3f;
+  padding: 14px 16px;
+  font-size: 0.86rem;
+  margin-bottom: 28px;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
   .auth {

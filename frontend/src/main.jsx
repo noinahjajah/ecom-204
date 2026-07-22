@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './AuthContext';
 import Home from './home';
 import Login from './Login';
+import Register from './Register';
 import CartPage from './CartPage';
 import CheckoutPage from './CheckoutPage';
 import About from './About';
@@ -12,7 +13,13 @@ import OrdersPage from './OrdersPage';
 import ProductDetailPage from './ProductDetailPage';
 import AddEditProduct from './admin/pages/AddEditProduct';
 import AdminDashboard from './admin/AdminDashboard';
-import AdminLogin from './admin/AdminLogin';
+import AdminLoginPage from './admin/AdminLogin';
+import AuthCallback from './AuthCallback';
+import AdminLoginNew from './admin-products/AdminLogin';
+import ProductsDashboard from './admin-products/ProductsDashboard';
+import ProductsTable from './admin-products/ProductsTable';
+import AddEditProductNew from './admin-products/AddEditProduct';
+import AdminLayout from './admin-products/AdminLayout';
 
 
 const pathname = window.location.pathname.replace(/\/+$/, "");
@@ -21,33 +28,37 @@ const pathname = window.location.pathname.replace(/\/+$/, "");
 const route =
   pathname === "/login"
     ? "login"
+    : pathname === "/register"
+      ? "register"
     : pathname === "/cart"
       ? "cart"
-      : pathname === "/checkout"
-        ? "checkout"
-      : pathname === "/about"
-        ? "about"
-      : pathname === "/makeup"
-        ? "makeup"
-      : pathname === "/skincare"
-        ? "skincare"
-      : pathname === "/orders"
-        ? "orders"
-      : pathname === "/product"
-        ? "product"
-      : pathname === "/admin"
-        ? "adminOrders"
-      : pathname === "/admin/login"
-        ? "adminLogin"
-      : pathname === "/admin/products"
-        ? "adminProducts"
-      : pathname === "/admin/products/new"
-        ? "adminProductsNew"
-      : pathname === "/admin/products/edit"
-        ? "adminProductsEdit"
-      : pathname === "/admin/orders"
-        ? "adminOrders"
-      : "home";
+    : pathname === "/checkout"
+      ? "checkout"
+    : pathname === "/about"
+      ? "about"
+    : pathname === "/makeup"
+      ? "makeup"
+    : pathname === "/skincare"
+      ? "skincare"
+    : pathname === "/orders"
+      ? "orders"
+    : pathname === "/product"
+      ? "product"
+    : pathname === "/admin" || pathname === "/admin/dashboard"
+      ? "adminDashboard"
+    : pathname === "/admin/login"
+      ? "adminLogin"
+    : pathname === "/admin/products"
+      ? "adminProducts"
+    : pathname === "/admin/products/new"
+      ? "adminProductsNew"
+    : pathname === "/admin/products/edit"
+      ? "adminProductsEdit"
+    : pathname === "/admin/orders"
+      ? "adminOrders"
+    : pathname === "/auth/callback"
+      ? "authCallback"
+    : "home";
 
 
 function AdminRoute({ children }) {
@@ -87,11 +98,11 @@ function ProtectedAdminLogin() {
 
   // ถ้าเป็น Admin อยู่แล้ว ให้ไปหน้า Dashboard
   if (isAdmin) {
-    window.location.href = "/admin/orders";
+    window.location.href = "/admin/products";
     return null;
   }
 
-  return <AdminLogin />;
+  return <AdminLoginNew />;
 }
 
 
@@ -100,6 +111,8 @@ function App() {
     <AuthProvider>
       {route === "login" ? (
         <Login />
+      ) : route === "register" ? (
+        <Register />
       ) : route === "cart" ? (
         <CartPage />
       ) : route === "checkout" ? (
@@ -116,14 +129,18 @@ function App() {
         <ProductDetailPage />
       ) : route === "adminLogin" ? (
         <ProtectedAdminLogin />
+      ) : route === "adminDashboard" ? (
+        <AdminLayout><ProductsDashboard /></AdminLayout>
       ) : route === "adminProducts" ? (
-        <AdminRoute><AdminDashboard /></AdminRoute>
+        <AdminLayout><ProductsTable /></AdminLayout>
       ) : route === "adminProductsNew" ? (
-        <AdminRoute><AddEditProduct /></AdminRoute>
+        <AdminLayout><AddEditProductNew /></AdminLayout>
       ) : route === "adminProductsEdit" ? (
-        <AdminRoute><AddEditProduct /></AdminRoute>
+        <AdminLayout><AddEditProductNew /></AdminLayout>
       ) : route === "adminOrders" ? (
-        <AdminRoute><AdminDashboard /></AdminRoute>
+        <AdminLayout><ProductsTable /></AdminLayout>
+      ) : route === "authCallback" ? (
+        <AuthCallback />
       ) : (
         <Home />
       )}
@@ -137,4 +154,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </React.StrictMode>
 );
-
