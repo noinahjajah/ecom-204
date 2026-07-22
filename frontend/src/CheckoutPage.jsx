@@ -285,7 +285,7 @@ export default function CheckoutPage() {
 
             {trackingInfo && (
               <div className="checkout-tracking">
-                <p>🚚 ขนส่ง: <b>{trackingInfo.carrier}</b></p>
+                <p> ขนส่ง: <b>{trackingInfo.carrier}</b></p>
                 <p>เลขพัสดุ: <b>{trackingInfo.trackingNumber}</b></p>
                 <a
                   href={trackingInfo.trackingUrl}
@@ -453,11 +453,11 @@ export default function CheckoutPage() {
                     value={shipping.preferredCarrier}
                     onChange={(e) => handleAddressChange("preferredCarrier", e.target.value)}
                   >
-                    <option value="superbet">🚚 Superbet Express (1-2 วัน)</option>
-                    <option value="kerry">📦 Kerry Express (1-3 วัน)</option>
-                    <option value="flash">⚡ Flash Express (1-2 วัน)</option>
-                    <option value="thailandpost">✉️ Thailand Post EMS (2-3 วัน)</option>
-                    <option value="j&t">🚀 J&T Express (1-2 วัน)</option>
+                    <option value="superbet"> Superbet Express (1-2 วัน)</option>
+                    <option value="kerry"> Kerry Express (1-3 วัน)</option>
+                    <option value="flash"> Flash Express (1-2 วัน)</option>
+                    <option value="thailandpost"> Thailand Post EMS (2-3 วัน)</option>
+                    <option value="j&t"> J&T Express (1-2 วัน)</option>
                   </select>
                 </div>
               </div>

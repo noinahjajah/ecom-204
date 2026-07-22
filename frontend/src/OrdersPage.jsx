@@ -124,7 +124,7 @@ export default function OrdersPage() {
 
               {/* ── พัสดุ + Tracking ── */}
               <div className="orders-section">
-                <h2 className="orders-section-title">🚚 พัสดุ</h2>
+                <h2 className="orders-section-title"> พัสดุ</h2>
                 <div className="orders-shipping-grid">
                   <div>
                     <div className="orders-card-label">ขนส่ง</div>

@@ -17,11 +17,11 @@ import { supabase } from "./supabaseClient";
  */
 
 const CARRIERS = [
-  { id: "superbet", label: "Superbet Express", icon: "🚚", eta: "1-2 วัน" },
-  { id: "kerry", label: "Kerry Express", icon: "📦", eta: "1-3 วัน" },
-  { id: "flash", label: "Flash Express", icon: "⚡", eta: "1-2 วัน" },
-  { id: "thailandpost", label: "Thailand Post EMS", icon: "✉️", eta: "2-3 วัน" },
-  { id: "j&t", label: "J&T Express", icon: "🚀", eta: "1-2 วัน" },
+  { id: "superbet", label: "Superbet Express", icon: "", eta: "1-2 วัน" },
+  { id: "kerry", label: "Kerry Express", icon: "", eta: "1-3 วัน" },
+  { id: "flash", label: "Flash Express", icon: "", eta: "1-2 วัน" },
+  { id: "thailandpost", label: "Thailand Post EMS", icon: "", eta: "2-3 วัน" },
+  { id: "j&t", label: "J&T Express", icon: "", eta: "1-2 วัน" },
 ];
 
 const PROVINCES = [
@@ -423,17 +423,17 @@ export default function MyAddresses() {
 
                 <div className="ma-card-main">
                   <div className="ma-card-name">{addr.fullName || addr.name}</div>
-                  <div className="ma-card-phone">📞 {addr.phone}</div>
-                  <div className="ma-card-email">✉️ {addr.email}</div>
+                  <div className="ma-card-phone"> {addr.phone}</div>
+                  <div className="ma-card-email"> {addr.email}</div>
                   <div className="ma-card-address">
                     {addr.address || addr.line1}
                     <br />
                     {addr.district || addr.city} {addr.province || addr.state} {addr.postcode}
                   </div>
-                  {addr.note && <div className="ma-card-note">📝 {addr.note}</div>}
+                  {addr.note && <div className="ma-card-note"> {addr.note}</div>}
 
                   <div className="ma-card-carrier">
-                    🚚 ขนส่ง: {CARRIERS.find((c) => c.id === (addr.preferredCarrier || "superbet"))?.label || "Superbet Express"}
+                     ขนส่ง: {CARRIERS.find((c) => c.id === (addr.preferredCarrier || "superbet"))?.label || "Superbet Express"}
                   </div>
                 </div>
 
@@ -467,7 +467,7 @@ export default function MyAddresses() {
         {/* ── ข้อมูลขนส่ง ── */}
         {addresses.length > 0 && (
           <div className="ma-shipping-info">
-            <h3 className="ma-shipping-title">🚚 พันธมิตรขนส่ง</h3>
+            <h3 className="ma-shipping-title"> พันธมิตรขนส่ง</h3>
             <div className="ma-carrier-grid">
               {CARRIERS.map((c) => (
                 <div key={c.id} className="ma-carrier-card">
