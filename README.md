@@ -19,7 +19,7 @@
 [![University Project](https://img.shields.io/badge/university%20project-CSI204-blue?style=flat-square)](#)
 [![Version](https://img.shields.io/badge/version-0.1.0-lightgrey?style=flat-square)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](#license)
-[![UAT](https://docs.google.com/spreadsheets/d/1aDWM5ZH85Iib7VZkZMBCY0ugO4ibHj9xapyfhQxtR64/edit?usp=sharing)](#)
+
 
 📖 [เอกสารระบบ](#-เอกสารประกอบโครงงาน) ·
 
@@ -163,8 +163,51 @@ flowchart LR
     DB -->|ข้อมูลสินค้า / ออเดอร์| A["🛠️ Admin Dashboard"]
     A -->|จัดการสินค้า / สต็อก / ออเดอร์| DB
 ```
+---
 
+# 🧪 User Acceptance Testing (UAT)
+
+ระบบได้รับการทดสอบด้วย **User Acceptance Testing (UAT)** เพื่อประเมินการทำงานของฟังก์ชันหลักทั้งฝั่งลูกค้าและผู้ดูแลระบบ โดยแบ่งผลการทดสอบออกเป็น **ผ่าน (Pass)** และ **ไม่ผ่าน (Fail)** ดังนี้
+
+| รหัส | โมดูล | กรณีทดสอบ | สถานะ |
+|------|--------|------------|:------:|
+| AUTH-01 | Login | เข้าสู่ระบบด้วย Google | ✅ Pass |
+| HOME-01 | Home | Navigation | ✅ Pass |
+| HOME-02 | Home | Banner & Story | ✅ Pass |
+| SCH-01 | Search | ค้นหาสินค้า | ✅ Pass |
+| PDP-01 | Product | แสดงรายละเอียดสินค้า | ✅ Pass |
+| PDP-02 | Product | ปุ่มเพิ่มสินค้า | ✅ Pass |
+| CART-01 | Cart | เพิ่ม/ลดจำนวนสินค้า | ✅ Pass |
+| CART-02 | Cart | ใช้งานโค้ดส่วนลด | ❌ Fail |
+| CHK-01 | Checkout | ฟอร์มการจัดส่ง | ❌ Fail |
+| CHK-02 | Checkout | ตรวจสอบบัตรเครดิต | ❌ Fail |
+| TRK-01 | Order Tracking | แสดงข้อมูลคำสั่งซื้อ | ❌ Fail |
+| TRK-02 | Order Tracking | ติดตามสถานะการจัดส่ง | ❌ Fail |
+| ADM-01 | Admin Dashboard | Dashboard Overview | ✅ Pass |
+| ADM-04 | Admin Products | จัดการสถานะสินค้า | ✅ Pass |
+| ADM-05 | Admin Products | Export CSV | ✅ Pass |
+| ADM-06 | Admin Products | Bulk Action | ✅ Pass |
+
+## 📊 ผลการทดสอบ
+
+| ผลการทดสอบ | จำนวน |
+|------------|-------:|
+| ✅ ผ่าน (Pass) | **11** |
+| ❌ ไม่ผ่าน (Fail) | **5** |
+| 📋 รวมทั้งหมด | **16 Test Cases** |
+
+## ⚠️ Known Issues
+
+- Coupon Code ยังไม่สามารถใช้งานได้
+- ข้อมูล Checkout ยังไม่ถูกบันทึก
+- การตรวจสอบหมายเลขบัตรเครดิตยังไม่สมบูรณ์
+- ระบบติดตามคำสั่งซื้อ (Order Tracking) ยังไม่แสดงข้อมูล
+- Timeline การจัดส่งยังไม่พร้อมใช้งาน
+
+> **หมายเหตุ:** ระบบส่วนใหญ่สามารถใช้งานได้ตามวัตถุประสงค์ของโครงงาน โดยฟังก์ชันที่ไม่ผ่านจะอยู่ในแผนการพัฒนาต่อ (Future Improvements)
 **เส้นทางการสั่งซื้อของลูกค้า**
+
+---
 
 ```mermaid
 flowchart LR
