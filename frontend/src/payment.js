@@ -33,55 +33,106 @@ export function luhnCheck(cardNumber) {
   if (digits.length < 12) return false;
   if (shouldBypassLuhnCheck()) return true;
   let sum = 0;
-  let shouldDouble = false;
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let digit = parseInt(digits[i], 10);
-    if (shouldDouble) {
+  let isEven = false;
+
+  // วนลูปจากขวาไปซ้าย
+  for (let i = clean.length - 1; i >= 0; i--) {
+    let digit = parseInt(clean.charAt(i), 10);
+
+    if (isEven) {
       digit *= 2;
       if (digit > 9) digit -= 9;
     }
+
     sum += digit;
-    shouldDouble = !shouldDouble;
+    isEven = !isEven;
   }
+
   return sum % 10 === 0;
 }
 
-/** เดา brand บัตรจากช่วงเลขขึ้นต้น (BIN) แบบเดียวกับที่ฟอร์มชำระเงินทั่วไปแสดงไอคอน */
-export function detectCardBrand(cardNumber) {
-  const digits = onlyDigits(cardNumber);
-  if (/^4/.test(digits)) return "Visa";
-  if (/^5[1-5]/.test(digits) || /^2(2[2-9]|[3-6]\d|7[01]|720)/.test(digits)) return "Mastercard";
-  if (/^3[47]/.test(digits)) return "American Express";
-  if (/^35(2[89]|[3-8]\d)/.test(digits)) return "JCB";
-  return "บัตร";
+/**
+ * ดึงเฉพาะตัวเลขออกจากสตริง
+ */
+export function onlyDigits(str) {
+  return String(str || "").replace(/\D/g, "");
 }
 
-/** ตรวจว่าวันหมดอายุ MM/YY ยังไม่หมดอายุ ณ วันนี้ */
+/**
+ * จัดรูปแบบหมายเลขบัตรให้มีช่องว่างทุก 4 ตัว
+ */
+export function formatCardNumber(value) {
+  const digits = onlyDigits(value);
+  const groups = [];
+  for (let i = 0; i < digits.length; i += 4) {
+    groups.push(digits.slice(i, i + 4));
+  }
+  return groups.join(" ");
+}
+
+/**
+ * จัดรูปแบบวันหมดอายุเป็น MM/YY
+ */
+export function formatExpiry(value) {
+  const digits = onlyDigits(value);
+  if (digits.length >= 2) {
+    return digits.slice(0, 2) + "/" + digits.slice(2, 4);
+  }
+  return digits;
+}
+
+/**
+ * ตรวจสอบวันหมดอายุว่ายังไม่หมดอายุ
+ */
 export function isExpiryValid(expiry) {
-  const match = /^(\d{2})\/(\d{2})$/.exec(expiry);
-  if (!match) return false;
-  const month = parseInt(match[1], 10);
-  const year = 2000 + parseInt(match[2], 10);
+  const digits = onlyDigits(expiry);
+  if (digits.length !== 4) return false;
+
+  const month = parseInt(digits.slice(0, 2), 10);
+  const year = parseInt(digits.slice(2, 4), 10);
+
   if (month < 1 || month > 12) return false;
+
   const now = new Date();
-  const currentYear = now.getFullYear();
+  const currentYear = now.getFullYear() % 100;
   const currentMonth = now.getMonth() + 1;
+
   if (year < currentYear) return false;
   if (year === currentYear && month < currentMonth) return false;
+
   return true;
 }
 
-export function isCvvValid(cvv, brand) {
-  const digits = onlyDigits(cvv);
-  return brand === "American Express" ? digits.length === 4 : digits.length === 3;
+/**
+ * ตรวจจับประเภทบัตรจากหมายเลข
+ */
+export function detectCardBrand(cardNumber) {
+  const digits = onlyDigits(cardNumber);
+  if (digits.startsWith("4")) return "Visa";
+  if (/^5[1-5]/.test(digits)) return "Mastercard";
+  if (/^3[47]/.test(digits)) return "American Express";
+  if (/^6(?:011|5)/.test(digits)) return "Discover";
+  if (/^(?:2131|1800|35)/.test(digits)) return "JCB";
+  return "Unknown";
 }
 
-/** สร้างเลขที่คำสั่งซื้อแบบอ่านง่าย เช่น MV-20260718-4821 */
+/**
+ * ตรวจสอบ CVV/CVC ว่าถูกต้องตามประเภทบัตร
+ */
+export function isCvvValid(cvv, brand) {
+  const digits = onlyDigits(cvv);
+  if (brand === "American Express") {
+    return digits.length === 4;
+  }
+  return digits.length === 3;
+}
+
+/**
+ * สร้างรหัสคำสั่งซื้อแบบสุ่ม
+ */
 export function generateOrderId() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `MV-${y}${m}${d}-${rand}`;
+  const prefix = "MV";
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}-${timestamp}-${random}`;
 }

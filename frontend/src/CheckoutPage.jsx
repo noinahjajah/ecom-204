@@ -15,6 +15,7 @@ import {
   deductStock,
   createRouvoOrder,
   createSuperbetTracking,
+  getOrders,
 } from "./cart";
 import { onlyDigits, formatCardNumber, formatExpiry, luhnCheck, detectCardBrand, isExpiryValid, isCvvValid, generateOrderId } from "./payment";
 import "./CheckoutPage.css";
@@ -36,14 +37,11 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState("");
   const [trackingInfo, setTrackingInfo] = useState(null);
 
-  // Card refs (uncontrolled to prevent cursor jump)
-  const numberRef = useRef("");
-  const expiryRef = useRef("");
-  const cvcRef = useRef("");
-  const nameRef = useRef("");
-  const numberInputRef = useRef(null);
-  const expiryInputRef = useRef(null);
-  const cvcInputRef = useRef(null);
+  // Card state (controlled แทน uncontrolled เพื่อให้ format ทำงานได้)
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
+  const [cardName, setCardName] = useState("");
 
   const [shipping, setShipping] = useState({
     fullName: "",
@@ -141,13 +139,13 @@ export default function CheckoutPage() {
 
   const validateCard = () => {
     if (selectedSavedCardId !== "new") return "";
-    const num = onlyDigits(numberRef.current);
-    if (num.length < 13 || num.length > 19) return "หมายเลขบัตรไม่ถูกต้อง";
+    const num = onlyDigits(cardNumber);
+    if (num.length < 13 || num.length > 19) return "หมายเลขบัตรต้องมี 13-19 หลัก";
     if (!luhnCheck(num)) return "หมายเลขบัตรไม่ถูกต้อง (Luhn check failed)";
-    if (!isExpiryValid(expiryRef.current)) return "วันหมดอายุไม่ถูกต้อง";
+    if (!isExpiryValid(cardExpiry)) return "วันหมดอายุไม่ถูกต้อง (รูปแบบ MM/YY)";
     const brand = detectCardBrand(num);
-    if (!isCvvValid(cvcRef.current, brand)) return "CVC ไม่ถูกต้อง";
-    if ((nameRef.current || "").trim().length < 3) return "กรุณากรอกชื่อบนบัตร";
+    if (!isCvvValid(cardCvc, brand)) return `CVC ไม่ถูกต้อง (${brand === "American Express" ? "ต้อง 4 หลัก" : "ต้อง 3 หลัก"})`;
+    if ((cardName || "").trim().length < 3) return "กรุณากรอกชื่อบนบัตร";
     return "";
   };
 
@@ -184,9 +182,9 @@ export default function CheckoutPage() {
       let paymentMethod = "บัตรเครดิต";
       let cardInfo = null;
       if (selectedSavedCardId === "new") {
-        const num = onlyDigits(numberRef.current);
+        const num = onlyDigits(cardNumber);
         const brand = detectCardBrand(num);
-        cardInfo = { brand, last4: num.slice(-4), expiry: expiryRef.current, name: nameRef.current };
+        cardInfo = { brand, last4: num.slice(-4), expiry: cardExpiry, name: cardName };
         saveCard(cardInfo);
         paymentMethod = brand;
       } else {
@@ -285,7 +283,7 @@ export default function CheckoutPage() {
 
             {trackingInfo && (
               <div className="checkout-tracking">
-                <p> ขนส่ง: <b>{trackingInfo.carrier}</b></p>
+                <p>🚚 ขนส่ง: <b>{trackingInfo.carrier}</b></p>
                 <p>เลขพัสดุ: <b>{trackingInfo.trackingNumber}</b></p>
                 <a
                   href={trackingInfo.trackingUrl}
@@ -352,7 +350,7 @@ export default function CheckoutPage() {
           <section className="checkout-main">
             {/* ── ที่อยู่จัดส่ง ── */}
             <div className="checkout-card">
-              <h2 className="checkout-section-title"> ที่อยู่จัดส่ง</h2>
+              <h2 className="checkout-section-title">📍 ที่อยู่จัดส่ง</h2>
 
               {savedAddresses.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
@@ -453,11 +451,11 @@ export default function CheckoutPage() {
                     value={shipping.preferredCarrier}
                     onChange={(e) => handleAddressChange("preferredCarrier", e.target.value)}
                   >
-                    <option value="superbet"> Superbet Express (1-2 วัน)</option>
-                    <option value="kerry"> Kerry Express (1-3 วัน)</option>
-                    <option value="flash"> Flash Express (1-2 วัน)</option>
-                    <option value="thailandpost"> Thailand Post EMS (2-3 วัน)</option>
-                    <option value="j&t">J&T Express (1-2 วัน)</option>
+                    <option value="superbet">🚚 Superbet Express (1-2 วัน)</option>
+                    <option value="kerry">🚚 Kerry Express (1-3 วัน)</option>
+                    <option value="flash">🚚 Flash Express (1-2 วัน)</option>
+                    <option value="thailandpost">🚚 Thailand Post EMS (2-3 วัน)</option>
+                    <option value="j&t">🚚 J&T Express (1-2 วัน)</option>
                   </select>
                 </div>
               </div>
@@ -465,7 +463,7 @@ export default function CheckoutPage() {
 
             {/* ── ข้อมูลบัตร ── */}
             <div className="checkout-card">
-              <h2 className="checkout-section-title"> ข้อมูลการชำระเงิน</h2>
+              <h2 className="checkout-section-title">💳 ข้อมูลการชำระเงิน</h2>
 
               {savedCards.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
@@ -489,40 +487,54 @@ export default function CheckoutPage() {
               {selectedSavedCardId === "new" && (
                 <div className="checkout-form-grid">
                   <div style={{ gridColumn: "1 / -1" }}>
-                    <label className="checkout-label">หมายเลขบัตร *</label>
+                    <label className="checkout-label">
+                      หมายเลขบัตร *
+                      <span style={{ fontSize: 11, color: "var(--taupe)", marginLeft: 8, fontWeight: 400 }}>
+                        (ทดสอบ: 4242 4242 4242 4242)
+                      </span>
+                    </label>
                     <input
-                      ref={numberInputRef}
                       className="checkout-input"
                       placeholder="0000 0000 0000 0000"
                       maxLength={23}
                       autoComplete="cc-number"
-                      onChange={(e) => { numberRef.current = e.target.value; }}
-                      onBlur={(e) => { e.target.value = formatCardNumber(e.target.value); }}
-                      onFocus={(e) => { e.target.value = onlyDigits(e.target.value); }}
+                      value={cardNumber}
+                      onChange={(e) => {
+                        const formatted = formatCardNumber(e.target.value);
+                        setCardNumber(formatted);
+                      }}
                     />
+                    {cardNumber && (
+                      <span style={{ fontSize: 12, color: "var(--taupe)", marginTop: 4, display: "block" }}>
+                        {detectCardBrand(onlyDigits(cardNumber)) !== "Unknown" && (
+                          <>ประเภทบัตร: <b>{detectCardBrand(onlyDigits(cardNumber))}</b></>
+                        )}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <label className="checkout-label">วันหมดอายุ (MM/YY) *</label>
                     <input
-                      ref={expiryInputRef}
                       className="checkout-input"
                       placeholder="MM/YY"
                       maxLength={5}
                       autoComplete="cc-exp"
-                      onChange={(e) => { expiryRef.current = e.target.value; }}
-                      onBlur={(e) => { e.target.value = formatExpiry(e.target.value); }}
+                      value={cardExpiry}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9/]/g, "");
+                        setCardExpiry(formatExpiry(val));
+                      }}
                     />
                   </div>
                   <div>
                     <label className="checkout-label">CVC *</label>
                     <input
-                      ref={cvcInputRef}
                       className="checkout-input"
                       placeholder="123"
                       maxLength={4}
                       autoComplete="cc-csc"
-                      onChange={(e) => { cvcRef.current = e.target.value; }}
-                      onBlur={(e) => { e.target.value = onlyDigits(e.target.value).slice(0, 4); }}
+                      value={cardCvc}
+                      onChange={(e) => setCardCvc(onlyDigits(e.target.value).slice(0, 4))}
                     />
                   </div>
                   <div style={{ gridColumn: "1 / -1" }}>
@@ -531,7 +543,8 @@ export default function CheckoutPage() {
                       className="checkout-input"
                       placeholder="FULL NAME"
                       autoComplete="cc-name"
-                      onChange={(e) => { nameRef.current = e.target.value; }}
+                      value={cardName}
+                      onChange={(e) => setCardName(e.target.value)}
                     />
                   </div>
                 </div>
@@ -586,7 +599,7 @@ export default function CheckoutPage() {
               </button>
 
               <p className="checkout-note">
-                 ข้อมูลบัตรของคุณถูกเข้ารหัสและไม่ถูกเก็บไว้ในเซิร์ฟเวอร์
+                🔒 ข้อมูลบัตรของคุณถูกเข้ารหัสและไม่ถูกเก็บไว้ในเซิร์ฟเวอร์
                 <br />
                 การชำระเงินจะถูกจำลองในระบบ (ไม่มีการตัดเงินจริง)
               </p>
