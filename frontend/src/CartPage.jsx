@@ -1,7 +1,18 @@
 import React, { useState, useMemo, useEffect } from "react";
 import "./CartPage.css";
 import Header from "./Header";
-import { getCart, updateQty as storeUpdateQty, removeFromCart, subscribeCart } from "./cart";
+import {
+  getCart,
+  updateQty as storeUpdateQty,
+  removeFromCart,
+  subscribeCart,
+  coupons,
+  getAppliedCoupon,
+  setAppliedCoupon as storeSetAppliedCoupon,
+  clearAppliedCoupon,
+  computeTotals,
+  FREE_SHIPPING_THRESHOLD,
+} from "./cart";
 import { supabase } from "./supabaseClient";
 
 // key ที่ใช้จำหน้าที่ผู้ใช้ตั้งใจจะไป ก่อนถูกเด้งไป login (ให้ AuthCallback.jsx อ่านแล้วเด้งกลับมาที่นี่)
@@ -17,15 +28,6 @@ const REDIRECT_AFTER_LOGIN_KEY = "mv_redirect_after_login";
  * และซิงก์กับปุ่ม "หยิบใส่ตะกร้า" ในหน้า Home / Skincare / Makeup รวมถึงตัวเลขบนไอคอน
  * ตะกร้าใน Header แบบเรียลไทม์ (เพราะแต่ละหน้าโหลดแยกกันจริง ไม่มี router/context ให้แชร์ state)
  */
-
-const coupons = {
-  SAVE10: { type: "percent", value: 10, minSpend: 0, max: 300 },
-  FREESHIP: { type: "free_shipping", minSpend: 0 },
-};
-
-// ตรงกับข้อความใน announcement bar ของ Header ("จัดส่งฟรีทุกออเดอร์ตั้งแต่ 1,500 บาท")
-const FREE_SHIPPING_THRESHOLD = 1500;
-const SHIPPING_FEE = 60;
 
 function formatTHB(n) {
   return n.toLocaleString("th-TH") + " บาท";
@@ -65,42 +67,31 @@ const IconBag = () => (
 export default function CartPage() {
   const [cart, setCart] = useState(() => getCart());
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  // คูปองที่ apply ไว้ อ่าน/เขียนผ่าน localStorage (cart.js) ไม่ใช้ state ลอย ๆ
+  // เพื่อให้หน้า Checkout อ่านค่าเดียวกันได้ ตัวเลขจะได้ตรงกันเป๊ะทั้งสองหน้า
+  const [appliedCoupon, setAppliedCoupon] = useState(() => getAppliedCoupon());
   const [couponMsg, setCouponMsg] = useState({ text: "", type: "" });
 
   // โหลดตะกร้าล่าสุดตอน mount และคอยฟังการเปลี่ยนแปลง (เช่น เพิ่มสินค้าจากแท็บ/หน้าอื่น)
   useEffect(() => {
     setCart(getCart());
-    const unsubscribe = subscribeCart((next) => setCart(next));
+    setAppliedCoupon(getAppliedCoupon());
+    const unsubscribe = subscribeCart((next) => {
+      setCart(next);
+      setAppliedCoupon(getAppliedCoupon());
+    });
     return unsubscribe;
   }, []);
 
-  const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price * item.qty, 0),
-    [cart]
+  // คำนวณยอดรวม/ส่วนลด/ค่าส่ง/ยอดสุทธิ จากฟังก์ชันเดียวกับที่ CheckoutPage ใช้
+  // (อ่าน cart + คูปองจาก localStorage ชุดเดียวกัน) เพื่อให้ตัวเลขตรงกันทั้งสองหน้าเสมอ
+  const { subtotal, discount: couponDiscount, shippingFee, total } = useMemo(
+    () => computeTotals(cart, appliedCoupon),
+    [cart, appliedCoupon]
   );
 
-  const couponDiscount = useMemo(() => {
-    if (!appliedCoupon) return 0;
-    const c = coupons[appliedCoupon];
-    if (!c) return 0;
-    if (c.type === "percent") return Math.min(subtotal * (c.value / 100), c.max ?? Infinity);
-    if (c.type === "fixed") return Math.min(c.value, subtotal);
-    return 0;
-  }, [appliedCoupon, subtotal]);
-
-  const isFreeShippingCoupon =
-    appliedCoupon && coupons[appliedCoupon]?.type === "free_shipping";
-
-  const shippingFee =
-    cart.length === 0
-      ? 0
-      : isFreeShippingCoupon || subtotal >= FREE_SHIPPING_THRESHOLD
-      ? 0
-      : SHIPPING_FEE;
-
-  const total = Math.max(subtotal - couponDiscount, 0) + shippingFee;
   const amountToFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - subtotal, 0);
+  const isFreeShippingCoupon = appliedCoupon && coupons[appliedCoupon]?.type === "free_shipping";
   const itemCount = cart.reduce((n, item) => n + item.qty, 0);
 
   function updateQty(id, delta) {
@@ -126,11 +117,13 @@ export default function CartPage() {
       setCouponMsg({ text: `ต้องซื้อขั้นต่ำ ${formatTHB(c.minSpend)} เพื่อใช้โค้ดนี้`, type: "error" });
       return;
     }
+    storeSetAppliedCoupon(code);
     setAppliedCoupon(code);
     setCouponMsg({ text: "ใช้ส่วนลดสำเร็จ", type: "success" });
   }
 
   function removeCoupon() {
+    clearAppliedCoupon();
     setAppliedCoupon(null);
     setCouponCode("");
     setCouponMsg({ text: "", type: "" });

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./CheckoutPage.css";
 import Header from "./Header";
-import { getCart, clearCart, saveOrder, getSavedCards, saveCard } from "./cart";
+import { getCart, clearCart, saveOrder, getSavedCards, saveCard, computeTotals, getAppliedCoupon } from "./cart";
 import {
   formatCardNumber,
   formatExpiry,
@@ -23,9 +23,6 @@ import {
  * ระบบจริง (Luhn, brand, วันหมดอายุ, CVV) แต่ไม่มีการเก็บเลขบัตรเต็มหรือ CVV ไว้ที่ใดเลย
  * เก็บเฉพาะ brand + เลข 4 ตัวท้าย + วันหมดอายุ เพื่อใช้แสดงผลเท่านั้น
  */
-
-const FREE_SHIPPING_THRESHOLD = 1500;
-const SHIPPING_FEE = 60;
 
 function formatTHB(n) {
   return n.toLocaleString("th-TH") + " บาท";
@@ -58,12 +55,12 @@ export default function CheckoutPage() {
     setCart(getCart());
   }, []);
 
-  const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price * item.qty, 0),
+  // ดึงยอดรวม/ส่วนลด/ค่าส่งจากฟังก์ชันเดียวกับหน้าตะกร้า (อ่าน cart + คูปองจาก localStorage
+  // ชุดเดียวกัน) เพื่อให้ยอดที่เห็นตอนจ่ายเงินตรงกับที่เห็นในตะกร้าเป๊ะ ๆ
+  const { subtotal, discount, shippingFee, total, appliedCoupon } = useMemo(
+    () => computeTotals(cart, getAppliedCoupon()),
     [cart]
   );
-  const shippingFee = cart.length === 0 || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-  const total = subtotal + shippingFee;
   const brand = detectCardBrand(card.number);
 
   function setShippingField(field) {
@@ -163,6 +160,8 @@ export default function CheckoutPage() {
         id: generateOrderId(),
         items: cart,
         subtotal,
+        discount,
+        appliedCoupon,
         shippingFee,
         total,
         shipping,
@@ -426,6 +425,12 @@ export default function CheckoutPage() {
                 <span>ยอดรวมสินค้า</span>
                 <span>{formatTHB(subtotal)}</span>
               </div>
+              {discount > 0 && (
+                <div className="checkout-summary-row discount">
+                  <span>ส่วนลด{appliedCoupon ? ` (${appliedCoupon})` : ""}</span>
+                  <span>-{formatTHB(discount)}</span>
+                </div>
+              )}
               <div className="checkout-summary-row">
                 <span>ค่าจัดส่ง</span>
                 <span>{shippingFee === 0 ? "ฟรี" : formatTHB(shippingFee)}</span>
@@ -444,4 +449,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-

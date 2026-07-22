@@ -12,6 +12,90 @@ import { isProductAvailable, listProducts } from "./admin-products/productsDataS
 const CART_KEY = "mv_cart";
 const EVENT_NAME = "cartchange";
 
+/* ── Coupon + ค่าส่ง (single source of truth) ──
+ * ย้ายมาไว้ที่นี่ (แทนที่จะแยกกันประกาศใน CartPage.jsx / CheckoutPage.jsx) เพื่อให้ทั้ง
+ * หน้าตะกร้าและหน้าชำระเงินคำนวณยอดรวม/ส่วนลด/ค่าส่งได้ตรงกันเป๊ะทุกครั้ง เพราะอ่านจาก
+ * localStorage ชุดเดียวกันทั้งหมด ไม่มีการเก็บ state ซ้ำซ้อนคนละที่
+ */
+const COUPON_KEY = "mv_applied_coupon";
+
+export const coupons = {
+  SAVE10: { type: "percent", value: 10, minSpend: 0, max: 300 },
+  FREESHIP: { type: "free_shipping", minSpend: 0 },
+};
+
+export const FREE_SHIPPING_THRESHOLD = 1500;
+export const SHIPPING_FEE = 60;
+
+export function getAppliedCoupon() {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(COUPON_KEY) || null;
+}
+
+export function setAppliedCoupon(code) {
+  window.localStorage.setItem(COUPON_KEY, code);
+  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: readCart() }));
+}
+
+export function clearAppliedCoupon() {
+  window.localStorage.removeItem(COUPON_KEY);
+  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: readCart() }));
+}
+
+/**
+ * ค่าส่งของ "สินค้าชิ้นหนึ่ง" อ่านจาก product.shipping ที่ตั้งไว้ในหน้า admin (AddEditProduct)
+ * ถ้าหาไม่เจอสินค้า หรือสินค้าไม่มีข้อมูล shipping เลย ใช้ SHIPPING_FEE เป็นค่า fallback
+ */
+function getItemShipping(item, products) {
+  const product = findMatchingProduct(item, products);
+  const shipping = product?.shipping;
+
+  if (!shipping) return { fee: SHIPPING_FEE, free: false };
+  if (shipping.freeShipping) return { fee: 0, free: true };
+
+  const fee = Number(shipping.shippingFee);
+  return { fee: Number.isFinite(fee) ? fee : SHIPPING_FEE, free: false };
+}
+
+/**
+ * ค่าส่งรวมของบิล = ค่าส่งที่สูงที่สุด (max) ในบรรดาสินค้าที่ "ไม่ได้" ตั้ง freeShipping ไว้
+ * ถ้าทุกชิ้นในตะกร้าเป็น freeShipping หมด → ค่าส่งบิล = 0
+ */
+function computeShippingFee(cart) {
+  if (cart.length === 0) return 0;
+
+  const products = listProducts();
+  const payableFees = cart
+    .map((item) => getItemShipping(item, products))
+    .filter((s) => !s.free)
+    .map((s) => s.fee);
+
+  return payableFees.length > 0 ? Math.max(...payableFees) : 0;
+}
+
+/**
+ * คำนวณยอดรวมสินค้า / ส่วนลด / ค่าส่ง / ยอดสุทธิ จาก cart + คูปองที่ apply ไว้ใน localStorage
+ * ใช้ฟังก์ชันนี้ทั้งใน CartPage และ CheckoutPage เพื่อให้ตัวเลขตรงกันเสมอ
+ */
+export function computeTotals(cart, appliedCoupon = getAppliedCoupon()) {
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const c = appliedCoupon ? coupons[appliedCoupon] : null;
+
+  let discount = 0;
+  if (c?.type === "percent") discount = Math.min(subtotal * (c.value / 100), c.max ?? Infinity);
+  else if (c?.type === "fixed") discount = Math.min(c.value, subtotal);
+
+  const isFreeShippingCoupon = c?.type === "free_shipping";
+  const shippingFee =
+    cart.length === 0 || isFreeShippingCoupon || subtotal >= FREE_SHIPPING_THRESHOLD
+      ? 0
+      : computeShippingFee(cart);
+
+  const total = Math.max(subtotal - discount, 0) + shippingFee;
+
+  return { subtotal, discount, shippingFee, total, appliedCoupon: c ? appliedCoupon : null };
+}
+
 function readCart() {
   if (typeof window === "undefined") return [];
   try {
@@ -149,6 +233,7 @@ export function removeFromCart(id) {
 
 export function clearCart() {
   writeCart([]);
+  clearAppliedCoupon();
 }
 
 /* ── Orders ──

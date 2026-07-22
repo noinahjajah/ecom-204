@@ -441,12 +441,12 @@ export default function AddEditProduct() {
         </div>
 
         {/* Media */}
-        <SectionTitle hint="รูปหน้าปก + คลังรูปเพิ่มเติม">รูปภาพสินค้า</SectionTitle>
+        <SectionTitle hint="">รูปภาพสินค้า</SectionTitle>
         <div className="admin-cover-row" style={{ marginBottom: 14 }}>
           <img src={product.mainImage || "https://placehold.co/160x160"} alt="main" className="admin-cover-preview" />
-          <Field label="URL รูปหน้าปก">
+          {/* <Field label="URL รูปหน้าปก">
             <input className="admin-input" value={product.mainImage || ""} onChange={(e) => set({ mainImage: e.target.value })} placeholder="https://..." />
-          </Field>
+          </Field> */}
         </div>
         <div className="admin-field-label" style={{ marginBottom: 8 }}>คลังรูปเพิ่มเติม (Gallery)</div>
         <GalleryEditor
