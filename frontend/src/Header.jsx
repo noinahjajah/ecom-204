@@ -340,6 +340,27 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
                     {displayName}
                   </div>
                   <a
+                    href="/myaddresses"
+                    onClick={() => setMenuOpen(false)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      textDecoration: "none",
+                      background: "none",
+                      border: "none",
+                      padding: "8px 10px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontSize: 14,
+                      color: "#1a1a1a",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.04)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                  >
+                    ที่อยู่ของฉัน
+                  </a>
+                  <a
                     href="/orders.html"
                     onClick={() => setMenuOpen(false)}
                     style={{

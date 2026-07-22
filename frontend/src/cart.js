@@ -298,6 +298,36 @@ export function removeSavedCard(id) {
   return next;
 }
 
+/* ── Saved addresses ──
+ * เก็บที่อยู่จัดส่งที่บันทึกไว้ (จากหน้าโปรไฟล์ หรือตอน checkout) เพื่อให้เลือกใช้ซ้ำได้
+ * โดยไม่ต้องกรอกใหม่ทุกครั้ง แบบเดียวกับที่ทำไว้กับบัตรเครดิต
+ */
+const ADDRESSES_KEY = "mv_saved_addresses";
+
+export function getSavedAddresses() {
+  try {
+    const raw = window.localStorage.getItem(ADDRESSES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveAddress({ label, fullName, phone, address }) {
+  const addresses = getSavedAddresses();
+  const id = `addr_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`;
+  const next = [...addresses, { id, label: label || "", fullName, phone, address }];
+  window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(next));
+  return next;
+}
+
+export function removeSavedAddress(id) {
+  const next = getSavedAddresses().filter((a) => a.id !== id);
+  window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(next));
+  return next;
+}
+
 /**
  * subscribeCart(cb) — สมัครรับการแจ้งเตือนเมื่อตะกร้าเปลี่ยน (ทั้งในแท็บเดียวกันและข้ามแท็บ)
  * คืนค่าฟังก์ชันสำหรับ unsubscribe (ใช้ใน useEffect cleanup)

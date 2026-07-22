@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./CheckoutPage.css";
 import Header from "./Header";
-import { getCart, clearCart, saveOrder, getSavedCards, saveCard, computeTotals, getAppliedCoupon, deductStock } from "./cart";
+import { getCart, clearCart, saveOrder, getSavedCards, saveCard, computeTotals, getAppliedCoupon, deductStock, getSavedAddresses } from "./cart";
 import {
   formatCardNumber,
   formatExpiry,
@@ -38,10 +38,20 @@ export default function CheckoutPage() {
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const [shipping, setShipping] = useState({
-    fullName: "",
-    phone: "",
-    address: "",
+  // ที่อยู่ที่บันทึกไว้ (จากหน้าโปรไฟล์) — ถ้ามีอยู่แล้ว เลือกอันแรกให้อัตโนมัติ
+  // และซ่อนฟอร์มกรอกที่อยู่ใหม่ไปเลย (เลือก "ที่อยู่ใหม่" เพื่อเปิดฟอร์มได้)
+  const [savedAddresses] = useState(() => getSavedAddresses());
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState(() =>
+    getSavedAddresses().length > 0 ? getSavedAddresses()[0].id : "new"
+  );
+
+  const [shipping, setShipping] = useState(() => {
+    const addresses = getSavedAddresses();
+    if (addresses.length > 0) {
+      const first = addresses[0];
+      return { fullName: first.fullName, phone: first.phone, address: first.address };
+    }
+    return { fullName: "", phone: "", address: "" };
   });
 
   const [card, setCard] = useState({
@@ -54,6 +64,19 @@ export default function CheckoutPage() {
   useEffect(() => {
     setCart(getCart());
   }, []);
+
+  // เมื่อเลือกที่อยู่ที่บันทึกไว้ ให้เติมค่าลง shipping ทันที; ถ้าเลือก "ที่อยู่ใหม่" ให้เคลียร์ฟอร์ม
+  useEffect(() => {
+    if (selectedSavedAddressId === "new") {
+      setShipping({ fullName: "", phone: "", address: "" });
+      return;
+    }
+    const found = savedAddresses.find((a) => a.id === selectedSavedAddressId);
+    if (found) {
+      setShipping({ fullName: found.fullName, phone: found.phone, address: found.address });
+      setErrors((prev) => ({ ...prev, fullName: null, phone: null, address: null }));
+    }
+  }, [selectedSavedAddressId, savedAddresses]);
 
   // ดึงยอดรวม/ส่วนลด/ค่าส่งจากฟังก์ชันเดียวกับหน้าตะกร้า (อ่าน cart + คูปองจาก localStorage
   // ชุดเดียวกัน) เพื่อให้ยอดที่เห็นตอนจ่ายเงินตรงกับที่เห็นในตะกร้าเป๊ะ ๆ
@@ -247,36 +270,63 @@ export default function CheckoutPage() {
           <div className="checkout-main">
             <section className="checkout-section">
               <h2>ที่อยู่จัดส่ง</h2>
-              <div className="checkout-field">
-                <label>ชื่อ-นามสกุลผู้รับ</label>
-                <input
-                  type="text"
-                  value={shipping.fullName}
-                  onChange={setShippingField("fullName")}
-                  placeholder="เช่น สมชาย ใจดี"
-                />
-                {errors.fullName && <span className="checkout-error">{errors.fullName}</span>}
-              </div>
-              <div className="checkout-field">
-                <label>เบอร์โทรศัพท์</label>
-                <input
-                  type="tel"
-                  value={shipping.phone}
-                  onChange={setShippingField("phone")}
-                  placeholder="08xxxxxxxx"
-                />
-                {errors.phone && <span className="checkout-error">{errors.phone}</span>}
-              </div>
-              <div className="checkout-field">
-                <label>ที่อยู่จัดส่ง</label>
-                <textarea
-                  rows={3}
-                  value={shipping.address}
-                  onChange={setShippingField("address")}
-                  placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
-                />
-                {errors.address && <span className="checkout-error">{errors.address}</span>}
-              </div>
+
+              {savedAddresses.length > 0 && (
+                <div className="checkout-field">
+                  <label>ที่อยู่ที่บันทึกไว้</label>
+                  <select
+                    value={selectedSavedAddressId}
+                    onChange={(e) => setSelectedSavedAddressId(e.target.value)}
+                  >
+                    {savedAddresses.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.label ? `${a.label} — ` : ""}{a.fullName} ({a.phone})
+                      </option>
+                    ))}
+                    <option value="new">ที่อยู่ใหม่</option>
+                  </select>
+                </div>
+              )}
+
+              {selectedSavedAddressId === "new" ? (
+                <>
+                  <div className="checkout-field">
+                    <label>ชื่อ-นามสกุลผู้รับ</label>
+                    <input
+                      type="text"
+                      value={shipping.fullName}
+                      onChange={setShippingField("fullName")}
+                      placeholder="เช่น สมชาย ใจดี"
+                    />
+                    {errors.fullName && <span className="checkout-error">{errors.fullName}</span>}
+                  </div>
+                  <div className="checkout-field">
+                    <label>เบอร์โทรศัพท์</label>
+                    <input
+                      type="tel"
+                      value={shipping.phone}
+                      onChange={setShippingField("phone")}
+                      placeholder="08xxxxxxxx"
+                    />
+                    {errors.phone && <span className="checkout-error">{errors.phone}</span>}
+                  </div>
+                  <div className="checkout-field">
+                    <label>ที่อยู่จัดส่ง</label>
+                    <textarea
+                      rows={3}
+                      value={shipping.address}
+                      onChange={setShippingField("address")}
+                      placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
+                    />
+                    {errors.address && <span className="checkout-error">{errors.address}</span>}
+                  </div>
+                </>
+              ) : (
+                <div className="checkout-field" style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.85 }}>
+                  <div>{shipping.fullName} • {shipping.phone}</div>
+                  <div>{shipping.address}</div>
+                </div>
+              )}
             </section>
 
             <section className="checkout-section">
