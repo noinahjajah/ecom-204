@@ -339,6 +339,49 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
                   <div style={{ padding: "6px 10px 8px", fontSize: 13, color: "#8a8a8a", borderBottom: "1px solid rgba(0,0,0,0.06)", marginBottom: 4 }}>
                     {displayName}
                   </div>
+                  <a
+                    href="/orders.html"
+                    onClick={() => setMenuOpen(false)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      textDecoration: "none",
+                      background: "none",
+                      border: "none",
+                      padding: "8px 10px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontSize: 14,
+                      color: "#1a1a1a",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.04)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                  >
+                    ติดตามสถานะสั่งซื้อ
+                  </a>
+                  <a
+                    href="/orders.html#order-history"
+                    onClick={() => setMenuOpen(false)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      textDecoration: "none",
+                      background: "none",
+                      border: "none",
+                      padding: "8px 10px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontSize: 14,
+                      color: "#1a1a1a",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.04)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                  >
+                    ประวัติคำสั่งซื้อ
+                  </a>
+                  <div style={{ height: 1, background: "rgba(0,0,0,0.06)", margin: "4px 0" }} />
                   <button
                     type="button"
                     onClick={handleLogout}

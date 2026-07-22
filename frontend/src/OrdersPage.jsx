@@ -218,26 +218,41 @@ export default function OrdersPage() {
           </aside>
         </div>
 
-        <div style={{ marginTop: 18 }}>
-          <h2 style={{ fontSize: 16, margin: "0 0 10px" }}>ออเดอร์ล่าสุด</h2>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            {orders.slice(0, 6).map((o) => {
+        <div style={{ marginTop: 18 }} id="order-history">
+          <h2 style={{ fontSize: 16, margin: "0 0 10px" }}>ประวัติคำสั่งซื้อ</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {orders.length === 0 && <p style={{ opacity: 0.75, margin: 0 }}>ยังไม่มีประวัติคำสั่งซื้อ</p>}
+            {orders.map((o) => {
               const isActive = o.id === order.id;
+              const itemCount = (o.items || []).reduce((n, it) => n + (it.qty || 0), 0);
               return (
                 <a
                   key={o.id}
                   href={`/orders.html?highlight=${encodeURIComponent(o.id)}`}
                   style={{
                     textDecoration: "none",
-                    borderRadius: 999,
-                    padding: "8px 12px",
-                    border: isActive ? "1px solid rgba(0,0,0,0.35)" : "1px solid rgba(0,0,0,0.12)",
+                    color: "inherit",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    borderRadius: 12,
+                    padding: "12px 14px",
+                    border: isActive ? "1px solid rgba(0,0,0,0.35)" : "1px solid rgba(0,0,0,0.1)",
                     background: isActive ? "rgba(0,0,0,0.03)" : "transparent",
-                    fontWeight: 600,
-                    opacity: isActive ? 1 : 0.85,
                   }}
                 >
-                  {o.id}
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{o.id}</div>
+                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
+                      {formatDateTH(o.createdAt)} • {itemCount} ชิ้น
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontWeight: 700 }}>{formatTHB(o.total || 0)}</div>
+                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>{o.status}</div>
+                  </div>
                 </a>
               );
             })}
@@ -247,4 +262,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
