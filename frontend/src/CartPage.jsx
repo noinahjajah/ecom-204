@@ -12,6 +12,7 @@ import {
   clearAppliedCoupon,
   computeTotals,
   FREE_SHIPPING_THRESHOLD,
+  getAvailableQty,
 } from "./cart";
 import { supabase } from "./supabaseClient";
 
@@ -177,7 +178,10 @@ export default function CartPage() {
                 <span>ราคารวม</span>
               </div>
 
-              {cart.map((item) => (
+              {cart.map((item) => {
+                const availableQty = getAvailableQty(item);
+                const atMax = Number.isFinite(availableQty) && item.qty >= availableQty;
+                return (
                 <div className="cart-item" key={item.id}>
                   <div className="cart-item-main">
                     <div className="cart-item-thumb">
@@ -193,6 +197,11 @@ export default function CartPage() {
                       <span className="cart-item-category">{item.category}</span>
                       <span className="cart-item-name">{item.name}</span>
                       <span className="cart-item-variant">{item.variant}</span>
+                      {atMax && (
+                        <span style={{ fontSize: 11.5, color: "#8b4a2b", fontWeight: 600 }}>
+                          สินค้าเหลือสูงสุด {availableQty} ชิ้น ในตะกร้าแล้ว
+                        </span>
+                      )}
                       <span className="cart-item-price-mobile">{formatTHB(item.price)}</span>
                       <button className="cart-item-remove" onClick={() => removeItem(item.id)} aria-label="ลบสินค้า">
                         <IconClose /> ลบ
@@ -205,14 +214,20 @@ export default function CartPage() {
                       <IconMinus />
                     </button>
                     <span>{item.qty}</span>
-                    <button onClick={() => updateQty(item.id, 1)} aria-label="เพิ่มจำนวน">
+                    <button
+                      onClick={() => updateQty(item.id, 1)}
+                      disabled={atMax}
+                      aria-label="เพิ่มจำนวน"
+                      title={atMax ? `สินค้าเหลือสูงสุด ${availableQty} ชิ้น` : undefined}
+                    >
                       <IconPlus />
                     </button>
                   </div>
 
                   <div className="cart-item-total">{formatTHB(item.price * item.qty)}</div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* ── สรุปคำสั่งซื้อ ── */}

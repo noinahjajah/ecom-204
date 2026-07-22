@@ -96,8 +96,7 @@ export default function Home() {
   }, []);
 
   const displayProducts = useMemo(() => {
-    const source = products.length > 0 ? products : PRODUCTS;
-    return source.filter((product) => isProductAvailable(product)).map((product) => {
+    return products.map((product) => {
       if (product?.name && (product?.descriptionShort || product?.desc)) {
         return {
           id: product.id || slugify(product.name),

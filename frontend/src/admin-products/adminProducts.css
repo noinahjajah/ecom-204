@@ -1023,3 +1023,231 @@
     right: -8px;
   }
 }
+/* ---------- Sales dashboard (revenue / orders / AOV + trend chart) ---------- */
+
+.admin-stat-grid--kpi {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 720px) {
+  .admin-stat-grid--kpi {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-stat-card--static {
+  cursor: default;
+}
+
+.admin-stat-card--static:hover {
+  transform: none;
+  border-color: var(--line);
+}
+
+.admin-chart-panel {
+  margin-top: 18px;
+}
+
+.admin-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.admin-range-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.admin-range-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+}
+
+.admin-range-btn.is-active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.admin-chart-scroll {
+  overflow-x: auto;
+}
+
+.admin-chart-svg {
+  display: block;
+}
+
+.admin-chart-axis-label {
+  font-size: 10px;
+  fill: var(--ink-faint);
+  font-family: "Inter", sans-serif;
+}
+
+.admin-chart-empty {
+  padding: 32px 10px;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+
+/* ---------- Sales dashboard v2 additions (profit, top sellers, low stock, WoW trend) ---------- */
+
+.admin-stat-card--static.is-alert {
+  border-color: var(--rose-soft-strong);
+}
+
+.admin-stat-card--static.is-warning {
+  border-color: var(--gold-soft-strong);
+}
+
+.admin-trend-badge {
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: fit-content;
+}
+
+.admin-trend-badge.is-up {
+  color: var(--sage);
+}
+
+.admin-trend-badge.is-down {
+  color: var(--rose);
+}
+
+.admin-kpi-note {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+.admin-secondary-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .admin-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Top 5 best sellers */
+
+.admin-top-products {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-top-product-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-top-product-rank {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 15px;
+  color: var(--gold-ink);
+  width: 26px;
+  flex-shrink: 0;
+}
+
+.admin-top-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-top-product-name {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.admin-top-product-meta {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-top: 1px;
+}
+
+.admin-top-product-revenue {
+  font-weight: 700;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+/* Low-stock alert list */
+
+.admin-lowstock-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-badge-count.is-warning {
+  background: var(--gold-soft-strong);
+  color: var(--gold-ink);
+}
+
+.admin-lowstock-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-lowstock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.admin-lowstock-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.admin-lowstock-name {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.admin-lowstock-qty {
+  font-size: 12px;
+  color: var(--gold-ink);
+  white-space: nowrap;
+}

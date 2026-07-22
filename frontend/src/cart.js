@@ -11,9 +11,15 @@ const GUEST_CART_KEY = "cart_guest";
 const CART_KEY_PREFIX = "cart_";
 const EVENT_NAME = "cartchange";
 const COUPON_KEY = "mv_applied_coupon";
-const ADDRESSES_KEY = "mv_saved_addresses";
-const ORDERS_KEY = "mv_orders";
-const CARDS_KEY = "mv_saved_cards";
+
+// ที่อยู่ / คำสั่งซื้อ / บัตรที่บันทึกไว้ ต้องผูกกับ user ที่ login อยู่ตอนนั้น
+// เหมือนตะกร้า ไม่งั้นสลับบัญชีแล้วข้อมูลจะติดตามไปด้วย (หรือเห็นของบัญชีอื่น)
+const ADDRESSES_KEY_PREFIX = "mv_saved_addresses_";
+const GUEST_ADDRESSES_KEY = "mv_saved_addresses_guest";
+const ORDERS_KEY_PREFIX = "mv_orders_";
+const GUEST_ORDERS_KEY = "mv_orders_guest";
+const CARDS_KEY_PREFIX = "mv_saved_cards_";
+const GUEST_CARDS_KEY = "mv_saved_cards_guest";
 
 /* ── Coupons ── */
 export const coupons = {
@@ -70,6 +76,21 @@ function getCurrentUserId() {
 export function getCartKey() {
   const userId = getCurrentUserId();
   return userId ? `${CART_KEY_PREFIX}${userId}` : GUEST_CART_KEY;
+}
+
+function getAddressesKey() {
+  const userId = getCurrentUserId();
+  return userId ? `${ADDRESSES_KEY_PREFIX}${userId}` : GUEST_ADDRESSES_KEY;
+}
+
+function getOrdersKey() {
+  const userId = getCurrentUserId();
+  return userId ? `${ORDERS_KEY_PREFIX}${userId}` : GUEST_ORDERS_KEY;
+}
+
+function getCardsKey() {
+  const userId = getCurrentUserId();
+  return userId ? `${CARDS_KEY_PREFIX}${userId}` : GUEST_CARDS_KEY;
 }
 
 function isCartStorageKey(key) {
@@ -230,6 +251,28 @@ function syncCartWithStock(cart = readCart(), key = getCartKey()) {
   return filtered;
 }
 
+// 🔒 หัวใจของ fix: จำนวนที่ "เพิ่มลงตะกร้าได้จริง" ต้องไม่เกิน stock ที่เหลือ
+// ของสินค้า (หรือของ variant นั้นๆ ถ้าสินค้ามี variants และ item ระบุ variant มา)
+// ใช้จุดเดียวนี้ทั้งใน addToCart / updateQty / setQty กันไม่ให้ตะกร้าไหลเกินสต็อก
+export function getAvailableQty(item, products = listProducts()) {
+  const product = findMatchingProduct(item, products);
+  if (!product) return Infinity; // หา product ไม่เจอ (เช่น fallback/demo data) อย่าบล็อกของเดิม
+
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  if (item.variant && variants.length > 0) {
+    const variant = variants.find(
+      (v) => (v.sku && v.sku === item.variant) || Object.values(v.options || {}).some((val) => val === item.variant)
+    );
+    if (variant) {
+      const variantStock = Number(variant.stock);
+      if (Number.isFinite(variantStock)) return Math.max(0, variantStock);
+    }
+  }
+
+  const stockTotal = Number(product.stockTotal ?? product.stock);
+  return Number.isFinite(stockTotal) ? Math.max(0, stockTotal) : Infinity;
+}
+
 export function slugify(name) {
   return name
     .toLowerCase()
@@ -257,15 +300,29 @@ export function getCartCount() {
   return getCart().reduce((n, item) => n + item.qty, 0);
 }
 
+// คืนค่าเป็น object เสมอ (ไม่ใช่ array ตะกร้าตรงๆ เหมือนเดิม) เพราะตอนนี้ต้องบอก
+// ผู้เรียกได้ว่าใส่ไปได้จริงกี่ชิ้น เผื่อสต็อกไม่พอ — จุดเรียกใช้เดิมในโปรเจกต์
+// (Makeup.jsx, Skincare.jsx, ProductDetailPage.jsx) ไม่มีที่ไหนอ่านค่าที่ return
+// แบบ array ตรงๆ อยู่แล้ว จึงเปลี่ยน shape ได้โดยไม่พังของเดิม
 export function addToCart(product, qty = 1) {
-  if (!isCartItemAvailable(product)) return getCart();
+  if (!isCartItemAvailable(product)) {
+    return { cart: getCart(), added: 0, availableQty: 0, capped: qty > 0 };
+  }
+
+  const products = listProducts();
+  const availableQty = getAvailableQty(product, products);
+
   const cart = getCart();
   const existing = cart.find(
     (item) => item.id === product.id && item.variant === product.variant
   );
+  const currentQty = existing ? existing.qty : 0;
+  const finalQty = Math.max(0, Math.min(currentQty + qty, availableQty));
+  const added = finalQty - currentQty;
+
   if (existing) {
-    existing.qty += qty;
-  } else {
+    existing.qty = finalQty;
+  } else if (finalQty > 0) {
     cart.push({
       id: product.id,
       name: product.name,
@@ -273,17 +330,21 @@ export function addToCart(product, qty = 1) {
       variant: product.variant || "",
       price: parsePrice(product.price),
       image: product.image || null,
-      qty,
+      qty: finalQty,
     });
   }
+
   saveCart(cart);
-  return cart;
+  return { cart, added, availableQty, capped: added < qty };
 }
 
 export function updateQty(id, delta) {
-  const cart = getCart().map((item) =>
-    item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
-  );
+  const products = listProducts();
+  const cart = getCart().map((item) => {
+    if (item.id !== id) return item;
+    const availableQty = getAvailableQty(item, products);
+    return { ...item, qty: Math.max(1, Math.min(item.qty + delta, availableQty)) };
+  });
   saveCart(cart);
   return cart;
 }
@@ -291,9 +352,12 @@ export function updateQty(id, delta) {
 export const updateQuantity = updateQty;
 
 export function setQty(id, qty) {
-  const cart = getCart().map((item) =>
-    item.id === id ? { ...item, qty: Math.max(1, qty) } : item
-  );
+  const products = listProducts();
+  const cart = getCart().map((item) => {
+    if (item.id !== id) return item;
+    const availableQty = getAvailableQty(item, products);
+    return { ...item, qty: Math.max(1, Math.min(qty, availableQty)) };
+  });
   saveCart(cart);
   return cart;
 }
@@ -353,7 +417,7 @@ export function deductStock(items) {
 /* ── Orders ── */
 export function getOrders() {
   try {
-    const raw = window.localStorage.getItem(ORDERS_KEY);
+    const raw = window.localStorage.getItem(getOrdersKey());
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -364,14 +428,14 @@ export function getOrders() {
 export function saveOrder(order) {
   const orders = getOrders();
   orders.unshift(order);
-  window.localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+  window.localStorage.setItem(getOrdersKey(), JSON.stringify(orders));
   return order;
 }
 
 /* ── Saved Cards ── */
 export function getSavedCards() {
   try {
-    const raw = window.localStorage.getItem(CARDS_KEY);
+    const raw = window.localStorage.getItem(getCardsKey());
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -384,20 +448,20 @@ export function saveCard({ brand, last4, expiry, name }) {
   const id = `${brand}-${last4}-${expiry}`;
   if (cards.some((c) => c.id === id)) return cards;
   const next = [...cards, { id, brand, last4, expiry, name }];
-  window.localStorage.setItem(CARDS_KEY, JSON.stringify(next));
+  window.localStorage.setItem(getCardsKey(), JSON.stringify(next));
   return next;
 }
 
 export function removeSavedCard(id) {
   const next = getSavedCards().filter((c) => c.id !== id);
-  window.localStorage.setItem(CARDS_KEY, JSON.stringify(next));
+  window.localStorage.setItem(getCardsKey(), JSON.stringify(next));
   return next;
 }
 
 /* ── Saved Addresses ── ปรับปรุงใหม่ พร้อม sync Rouvo ── */
 function _loadAddressesRaw() {
   try {
-    const raw = window.localStorage.getItem(ADDRESSES_KEY);
+    const raw = window.localStorage.getItem(getAddressesKey());
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -426,7 +490,7 @@ export async function saveAddress(addr) {
   } else {
     addrs.push(next);
   }
-  window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(addrs));
+  window.localStorage.setItem(getAddressesKey(), JSON.stringify(addrs));
   window.dispatchEvent(new CustomEvent("addresseschange", { detail: addrs }));
 
   // 🔄 Sync กับ Rouvo CRM
@@ -437,7 +501,7 @@ export async function saveAddress(addr) {
 
 export function removeSavedAddress(id) {
   const next = _loadAddressesRaw().filter((a) => a.id !== id);
-  window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(next));
+  window.localStorage.setItem(getAddressesKey(), JSON.stringify(next));
   window.dispatchEvent(new CustomEvent("addresseschange", { detail: next }));
   return next;
 }
@@ -447,7 +511,7 @@ export function updateSavedAddress(id, data) {
   const idx = addrs.findIndex((a) => a.id === id);
   if (idx >= 0) {
     addrs[idx] = { ...addrs[idx], ...data, updatedAt: new Date().toISOString() };
-    window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(addrs));
+    window.localStorage.setItem(getAddressesKey(), JSON.stringify(addrs));
     window.dispatchEvent(new CustomEvent("addresseschange", { detail: addrs }));
   }
   return addrs;
@@ -455,7 +519,7 @@ export function updateSavedAddress(id, data) {
 
 export function setDefaultAddress(id) {
   const addrs = _loadAddressesRaw().map((a) => ({ ...a, isDefault: a.id === id }));
-  window.localStorage.setItem(ADDRESSES_KEY, JSON.stringify(addrs));
+  window.localStorage.setItem(getAddressesKey(), JSON.stringify(addrs));
   window.dispatchEvent(new CustomEvent("addresseschange", { detail: addrs }));
   return addrs;
 }
@@ -464,7 +528,7 @@ export function subscribeAddresses(callback) {
   const handler = (e) => callback(e.detail ?? _loadAddressesRaw());
   window.addEventListener("addresseschange", handler);
   window.addEventListener("storage", (e) => {
-    if (!e.key || e.key === ADDRESSES_KEY) callback(_loadAddressesRaw());
+    if (!e.key || e.key === getAddressesKey()) callback(_loadAddressesRaw());
   });
   return () => window.removeEventListener("addresseschange", handler);
 }

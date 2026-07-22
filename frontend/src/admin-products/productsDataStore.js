@@ -266,6 +266,12 @@ export function ensureSeeded() {
 export function isProductAvailable(product) {
   if (!product) return false;
 
+  // สินค้าที่ยังไม่ Active (Draft / Pending / Hidden / Rejected) ไม่ควรขายหน้าร้าน
+  // ต่อให้ตัวเลข stockTotal จะยังไม่ใช่ 0 ก็ตาม
+  if (product.status && product.status !== "Active") {
+    return false;
+  }
+
   const stockValue = product.stockTotal ?? product.stock;
   if (stockValue === null || stockValue === undefined || stockValue === "") {
     return true;

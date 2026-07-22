@@ -467,16 +467,6 @@ export default function MyAddresses() {
         {/* ── ข้อมูลขนส่ง ── */}
         {addresses.length > 0 && (
           <div className="ma-shipping-info">
-            <h3 className="ma-shipping-title"> พันธมิตรขนส่ง</h3>
-            <div className="ma-carrier-grid">
-              {CARRIERS.map((c) => (
-                <div key={c.id} className="ma-carrier-card">
-                  <span className="ma-carrier-icon">{c.icon}</span>
-                  <span className="ma-carrier-name">{c.label}</span>
-                  <span className="ma-carrier-eta">{c.eta}</span>
-                </div>
-              ))}
-            </div>
             <p className="ma-shipping-note">
               * ระยะเวลาจัดส่งเป็นการประมาณการ อาจเปลี่ยนแปลงตามสถานการณ์
               <br />

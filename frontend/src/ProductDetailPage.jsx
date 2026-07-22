@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import "./ProductDetailPage.css";
 import Header from "./Header";
 import { addToCart, parsePrice, slugify } from "./cart";
+import { supabase } from "./supabaseClient";
 import { getProductById as getFallbackProductById, getRelatedProducts as getFallbackRelatedProducts } from "./productData";
 import { isProductAvailable, listProducts } from "./admin-products/productsDataStore";
 
@@ -75,7 +76,7 @@ function normalizeProductForDetail(product) {
     category: product.category || "",
     variantOptions: variantOptions.length > 0 ? variantOptions : variantFallback,
     variantDefault: product.variantDefault || variantOptions[0] || variantFallback[0] || null,
-    price: Number(product.price ?? 0),
+    price: parsePrice(product.price ?? 0),
     oldPrice: product.oldPrice ?? product.promoPrice ?? null,
     tag: product.tag || product.tags?.[0] || null,
     image: product.mainImage || product.gallery?.[0] || product.image || "https://placehold.co/800x900/faf3ea/ad8a55?text=Product",
@@ -132,12 +133,12 @@ export default function ProductDetailPage() {
     return (getFallbackRelatedProducts(product) || []).map((item) => normalizeProductForDetail(item));
   }, [product, localProducts]);
 
-  const [justAdded, setJustAdded] = useState(false);
+  const [justAdded, setJustAdded] = useState(null);
 
   const handleAddToCart = () => {
-    if (!product || !product.inStock) return;
+    if (!product || !product.inStock) return false;
 
-    addToCart({
+    const result = addToCart({
       id: product.id,
       name: product.name,
       category: product.category || "",
@@ -146,13 +147,29 @@ export default function ProductDetailPage() {
       image: product.image,
     });
 
-    setJustAdded(true);
+    // สต็อกไม่พอ (หรือในตะกร้ามีครบเท่าที่มีอยู่แล้ว) ให้บอกตามจริง
+    if (result.added > 0) {
+      setJustAdded(result.capped ? `เพิ่มได้สูงสุด ${result.availableQty} ชิ้น` : "เพิ่มแล้ว ✓");
+    } else {
+      setJustAdded("มีอยู่ในตะกร้าครบตามสต็อกแล้ว");
+    }
     window.clearTimeout(handleAddToCart._t);
-    handleAddToCart._t = window.setTimeout(() => setJustAdded(false), 1400);
+    handleAddToCart._t = window.setTimeout(() => setJustAdded(null), 1400);
+
+    return result.added > 0;
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     handleAddToCart();
+
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) {
+      // ยังไม่ login -> พาไป login ก่อน แล้วให้ AuthCallback พากลับมา /checkout เอง
+      window.localStorage.setItem("mv_redirect_after_login", "/checkout");
+      window.location.href = "/login";
+      return;
+    }
+
     // รอให้ cart update สั้นๆ แล้วค่อยไป checkout
     window.setTimeout(() => {
       window.location.href = "/checkout";
@@ -250,7 +267,7 @@ export default function ProductDetailPage() {
 
             <div className="pdp-actions">
               <button className="btn-ghost" onClick={handleAddToCart} disabled={!product.inStock}>
-                {product.inStock ? (justAdded ? "เพิ่มแล้ว ✓" : "เพิ่มลงตะกร้า") : "สินค้าหมด"}
+                {product.inStock ? (justAdded || "เพิ่มลงตะกร้า") : "สินค้าหมด"}
               </button>
               <button className="btn-primary" onClick={handleBuyNow} disabled={!product.inStock}>
                 ซื้อทันที
@@ -306,4 +323,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-

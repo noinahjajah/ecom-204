@@ -11,6 +11,10 @@ export function onlyDigits(value) {
   return value.replace(/\D/g, "");
 }
 
+function shouldBypassLuhnCheck() {
+  return import.meta.env?.DEV && import.meta.env?.VITE_BYPASS_CARD_LUHN === "true";
+}
+
 /** จัดกลุ่มเลขบัตรเป็นชุดละ 4 หลักเพื่อให้อ่านง่ายขณะพิมพ์ */
 export function formatCardNumber(value) {
   return onlyDigits(value).slice(0, 19).replace(/(.{4})/g, "$1 ").trim();
@@ -27,6 +31,7 @@ export function formatExpiry(value) {
 export function luhnCheck(cardNumber) {
   const digits = onlyDigits(cardNumber);
   if (digits.length < 12) return false;
+  if (shouldBypassLuhnCheck()) return true;
   let sum = 0;
   let shouldDouble = false;
   for (let i = digits.length - 1; i >= 0; i--) {

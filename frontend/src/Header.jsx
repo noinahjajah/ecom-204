@@ -74,6 +74,7 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setMenuOpen(false);
+    window.location.href = "/";
   };
 
   const handleSearchToggle = () => {
@@ -230,10 +231,10 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
                   </div>
                   <div className="account-dropdown-divider" />
                   <a href="/myaddresses" className="account-dropdown-item" onClick={() => setMenuOpen(false)}>
-                     ที่อยู่ของฉัน
+                    ที่อยู่ของฉัน
                   </a>
                   <a href="/orders.html" className="account-dropdown-item" onClick={() => setMenuOpen(false)}>
-                     ติดตามสถานะสั่งซื้อ
+                    ติดตามสถานะสั่งซื้อ
                   </a>
                   <a href="/orders.html#order-history" className="account-dropdown-item" onClick={() => setMenuOpen(false)}>
                      ประวัติคำสั่งซื้อ

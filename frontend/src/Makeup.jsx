@@ -157,7 +157,7 @@ export default function Makeup() {
 
   const handleAddToCart = (p) => {
     const priceValue = Number(p.priceValue ?? String(p.price || "").replace(/[^0-9.-]/g, ""));
-    addToCart({
+    const result = addToCart({
       id: slugify(p.name),
       name: p.name,
       category: "เมคอัพ",
@@ -165,14 +165,19 @@ export default function Makeup() {
       price: priceValue,
       image: p.img,
     });
-    setJustAdded(p.name);
+
+    // สต็อกไม่พอ (หรือหมดแล้ว) ให้บอกตามจริง แทนที่จะขึ้น "เพิ่มแล้ว ✓" ทั้งที่ใส่ไม่ได้เลย/ได้ไม่ครบ
+    if (result.added > 0) {
+      setJustAdded({ name: p.name, label: result.capped ? `เพิ่มได้สูงสุด ${result.availableQty} ชิ้น` : "เพิ่มแล้ว ✓" });
+    } else {
+      setJustAdded({ name: p.name, label: "สินค้าหมดสต็อกแล้ว" });
+    }
     window.clearTimeout(handleAddToCart._t);
     handleAddToCart._t = window.setTimeout(() => setJustAdded(null), 1400);
   };
 
   const displayProducts = useMemo(() => {
-    const source = products.length > 0 ? products : PRODUCTS;
-    return source.filter((product) => isProductAvailable(product)).map((product) => {
+    return products.map((product) => {
       if (product?.name && (product?.descriptionShort || product?.desc)) {
         return normalizeMakeupProduct(product);
       }
@@ -281,7 +286,7 @@ export default function Makeup() {
                   {p.tag && <span className="mk-product-tag">{p.tag}</span>}
                   <img src={p.img} alt={p.name} />
                   <button className="mk-product-quickadd" onClick={() => handleAddToCart(p)}>
-                    {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
+                    {justAdded?.name === p.name ? justAdded.label : "หยิบใส่ตะกร้า"}
                   </button>
                 </div>
                 <div className="mk-product-info">
@@ -295,7 +300,7 @@ export default function Makeup() {
                 </div>
               </a>
             <button className="mk-product-quickadd" onClick={() => handleAddToCart(p)}>
-              {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
+              {justAdded?.name === p.name ? justAdded.label : "หยิบใส่ตะกร้า"}
             </button>
           </div>
         ))}
