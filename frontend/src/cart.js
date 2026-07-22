@@ -4,8 +4,11 @@
  */
 
 import { isProductAvailable, listProducts, decrementStockForOrder } from "./admin-products/productsDataStore";
+import { supabase } from "./supabaseClient";
 
-const CART_KEY = "mv_cart";
+const LEGACY_CART_KEYS = ["mv_cart", "cart"];
+const GUEST_CART_KEY = "cart_guest";
+const CART_KEY_PREFIX = "cart_";
 const EVENT_NAME = "cartchange";
 const COUPON_KEY = "mv_applied_coupon";
 const ADDRESSES_KEY = "mv_saved_addresses";
@@ -22,6 +25,108 @@ export const coupons = {
 export const FREE_SHIPPING_THRESHOLD = 1500;
 export const SHIPPING_FEE = 60;
 
+function normalizeCart(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function readCartFromKey(key) {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(key);
+    return normalizeCart(raw ? JSON.parse(raw) : []);
+  } catch {
+    return [];
+  }
+}
+
+function extractUserIdFromSession(sessionValue) {
+  if (!sessionValue || typeof sessionValue !== "object") return null;
+  if (sessionValue.user?.id) return sessionValue.user.id;
+  if (sessionValue.session?.user?.id) return sessionValue.session.user.id;
+  if (sessionValue.currentSession?.user?.id) return sessionValue.currentSession.user.id;
+  if (Array.isArray(sessionValue)) {
+    for (const entry of sessionValue) {
+      const userId = extractUserIdFromSession(entry);
+      if (userId) return userId;
+    }
+  }
+  return null;
+}
+
+function getCurrentUserId() {
+  if (typeof window === "undefined") return null;
+  const authStorageKey = supabase.auth?.storageKey;
+  if (!authStorageKey) return null;
+
+  try {
+    const raw = window.localStorage.getItem(authStorageKey);
+    if (!raw) return null;
+    return extractUserIdFromSession(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function getCartKey() {
+  const userId = getCurrentUserId();
+  return userId ? `${CART_KEY_PREFIX}${userId}` : GUEST_CART_KEY;
+}
+
+function isCartStorageKey(key) {
+  return Boolean(
+    key && (key === GUEST_CART_KEY || key.startsWith(CART_KEY_PREFIX) || LEGACY_CART_KEYS.includes(key))
+  );
+}
+
+function migrateLegacyGuestCart() {
+  if (typeof window === "undefined") return [];
+
+  const guestCart = readCartFromKey(GUEST_CART_KEY);
+  if (guestCart.length > 0) {
+    LEGACY_CART_KEYS.forEach((key) => window.localStorage.removeItem(key));
+    return guestCart;
+  }
+
+  for (const legacyKey of LEGACY_CART_KEYS) {
+    const legacyCart = readCartFromKey(legacyKey);
+    if (legacyCart.length === 0) continue;
+    window.localStorage.setItem(GUEST_CART_KEY, JSON.stringify(legacyCart));
+    LEGACY_CART_KEYS.forEach((key) => window.localStorage.removeItem(key));
+    return legacyCart;
+  }
+
+  return guestCart;
+}
+
+function readGuestCart() {
+  migrateLegacyGuestCart();
+  return readCartFromKey(GUEST_CART_KEY);
+}
+
+function notifyCartChange(cart = readCart()) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: cart }));
+}
+
+function mergeCartItems(baseCart, incomingCart) {
+  const merged = baseCart.map((item) => ({ ...item }));
+
+  incomingCart.forEach((incomingItem) => {
+    const existing = merged.find(
+      (item) => item.id === incomingItem.id && item.variant === incomingItem.variant
+    );
+
+    if (existing) {
+      existing.qty += incomingItem.qty;
+      return;
+    }
+
+    merged.push({ ...incomingItem });
+  });
+
+  return merged;
+}
+
 export function getAppliedCoupon() {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(COUPON_KEY) || null;
@@ -29,12 +134,12 @@ export function getAppliedCoupon() {
 
 export function setAppliedCoupon(code) {
   window.localStorage.setItem(COUPON_KEY, code);
-  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: readCart() }));
+  notifyCartChange();
 }
 
 export function clearAppliedCoupon() {
   window.localStorage.removeItem(COUPON_KEY);
-  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: readCart() }));
+  notifyCartChange();
 }
 
 /* ── Shipping calculation ── */
@@ -80,19 +185,13 @@ export function computeTotals(cart, appliedCoupon = getAppliedCoupon()) {
 
 /* ── Cart helpers ── */
 function readCart() {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(CART_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const cartKey = getCartKey();
+  return cartKey === GUEST_CART_KEY ? readGuestCart() : readCartFromKey(cartKey);
 }
 
-function writeCart(cart) {
-  window.localStorage.setItem(CART_KEY, JSON.stringify(cart));
-  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: cart }));
+function writeCart(cart, key = getCartKey()) {
+  window.localStorage.setItem(key, JSON.stringify(cart));
+  notifyCartChange(cart);
 }
 
 function findMatchingProduct(item, products = listProducts()) {
@@ -125,9 +224,9 @@ function isCartItemAvailable(item, products = listProducts()) {
   return false;
 }
 
-function syncCartWithStock(cart = readCart()) {
+function syncCartWithStock(cart = readCart(), key = getCartKey()) {
   const filtered = cart.filter((item) => isCartItemAvailable(item));
-  if (filtered.length !== cart.length) writeCart(filtered);
+  if (filtered.length !== cart.length) writeCart(filtered, key);
   return filtered;
 }
 
@@ -146,6 +245,12 @@ export function parsePrice(price) {
 
 export function getCart() {
   return syncCartWithStock();
+}
+
+export function saveCart(cart) {
+  const nextCart = normalizeCart(cart);
+  writeCart(nextCart);
+  return nextCart;
 }
 
 export function getCartCount() {
@@ -171,7 +276,7 @@ export function addToCart(product, qty = 1) {
       qty,
     });
   }
-  writeCart(cart);
+  saveCart(cart);
   return cart;
 }
 
@@ -179,27 +284,66 @@ export function updateQty(id, delta) {
   const cart = getCart().map((item) =>
     item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
   );
-  writeCart(cart);
+  saveCart(cart);
   return cart;
 }
+
+export const updateQuantity = updateQty;
 
 export function setQty(id, qty) {
   const cart = getCart().map((item) =>
     item.id === id ? { ...item, qty: Math.max(1, qty) } : item
   );
-  writeCart(cart);
+  saveCart(cart);
   return cart;
 }
 
 export function removeFromCart(id) {
   const cart = getCart().filter((item) => item.id !== id);
-  writeCart(cart);
+  saveCart(cart);
   return cart;
 }
 
 export function clearCart() {
-  writeCart([]);
+  saveCart([]);
   clearAppliedCoupon();
+}
+
+export function hasGuestCartItems() {
+  return readGuestCart().length > 0;
+}
+
+export function discardGuestCart() {
+  window.localStorage.removeItem(GUEST_CART_KEY);
+  LEGACY_CART_KEYS.forEach((key) => window.localStorage.removeItem(key));
+}
+
+/**
+ * รวมตะกร้า guest เข้ากับตะกร้าของ user ที่ login
+ * ต้องส่ง { confirm: true } เท่านั้นถึงจะ merge จริง (กันไม่ให้ auto-merge แบบเงียบๆ
+ * ไปปนกับบัญชีที่ไม่เกี่ยวข้อง เวลาสลับ login หลายบัญชีบนเครื่องเดียวกัน)
+ */
+export function mergeGuestCartIntoUserCart(userId, { confirm = false } = {}) {
+  if (typeof window === "undefined" || !userId) return [];
+
+  const guestCart = readGuestCart();
+  const userKey = `${CART_KEY_PREFIX}${userId}`;
+  const userCart = readCartFromKey(userKey);
+
+  if (guestCart.length === 0) {
+    return syncCartWithStock(userCart, userKey);
+  }
+
+  if (!confirm) {
+    // มีของค้างใน guest cart แต่ยังไม่ได้รับการยืนยัน -> ไม่ merge, คืนตะกร้าเดิมของ user ไปก่อน
+    return syncCartWithStock(userCart, userKey);
+  }
+
+  const mergedCart = syncCartWithStock(mergeCartItems(userCart, guestCart), userKey);
+  window.localStorage.setItem(userKey, JSON.stringify(mergedCart));
+  discardGuestCart();
+  notifyCartChange(mergedCart);
+  return mergedCart;
 }
 
 export function deductStock(items) {
@@ -472,7 +616,7 @@ export async function getSuperbetStatus(trackingNumber) {
 export function subscribeCart(callback) {
   const handleCustom = (e) => callback(e.detail ?? readCart());
   const handleStorage = (e) => {
-    if (!e.key || e.key === CART_KEY) callback(readCart());
+    if (!e.key || isCartStorageKey(e.key) || e.key === supabase.auth?.storageKey) callback(readCart());
   };
   window.addEventListener(EVENT_NAME, handleCustom);
   window.addEventListener("storage", handleStorage);
@@ -480,4 +624,10 @@ export function subscribeCart(callback) {
     window.removeEventListener(EVENT_NAME, handleCustom);
     window.removeEventListener("storage", handleStorage);
   };
+}
+
+if (typeof window !== "undefined") {
+  supabase.auth.onAuthStateChange(() => {
+    notifyCartChange();
+  });
 }

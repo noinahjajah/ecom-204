@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { mergeGuestCartIntoUserCart, hasGuestCartItems, discardGuestCart } from "./cart";
 import { supabase } from "./supabaseClient";
 
 export default function AuthCallback() {
@@ -20,6 +21,21 @@ export default function AuthCallback() {
       }
 
       const userId = data.session.user.id;
+
+      if (hasGuestCartItems()) {
+        const wantMerge = window.confirm(
+          "คุณมีสินค้าที่เพิ่งเลือกไว้ตอนยังไม่ได้ล็อกอิน ต้องการเพิ่มเข้าตะกร้าของบัญชีนี้หรือไม่?"
+        );
+        if (wantMerge) {
+          mergeGuestCartIntoUserCart(userId, { confirm: true });
+        } else {
+          discardGuestCart();
+          mergeGuestCartIntoUserCart(userId);
+        }
+      } else {
+        mergeGuestCartIntoUserCart(userId);
+      }
+
       console.log("=== DEBUG: userId ===", userId);
 
       const { data: profile, error: profileError } = await supabase

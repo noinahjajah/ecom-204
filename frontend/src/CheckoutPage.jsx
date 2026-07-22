@@ -352,7 +352,7 @@ export default function CheckoutPage() {
           <section className="checkout-main">
             {/* ── ที่อยู่จัดส่ง ── */}
             <div className="checkout-card">
-              <h2 className="checkout-section-title">📍 ที่อยู่จัดส่ง</h2>
+              <h2 className="checkout-section-title"> ที่อยู่จัดส่ง</h2>
 
               {savedAddresses.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
@@ -453,11 +453,11 @@ export default function CheckoutPage() {
                     value={shipping.preferredCarrier}
                     onChange={(e) => handleAddressChange("preferredCarrier", e.target.value)}
                   >
-                    <option value="superbet">🚚 Superbet Express (1-2 วัน)</option>
-                    <option value="kerry">📦 Kerry Express (1-3 วัน)</option>
-                    <option value="flash">⚡ Flash Express (1-2 วัน)</option>
-                    <option value="thailandpost">✉️ Thailand Post EMS (2-3 วัน)</option>
-                    <option value="j&t">🚀 J&T Express (1-2 วัน)</option>
+                    <option value="superbet"> Superbet Express (1-2 วัน)</option>
+                    <option value="kerry"> Kerry Express (1-3 วัน)</option>
+                    <option value="flash"> Flash Express (1-2 วัน)</option>
+                    <option value="thailandpost"> Thailand Post EMS (2-3 วัน)</option>
+                    <option value="j&t">J&T Express (1-2 วัน)</option>
                   </select>
                 </div>
               </div>
@@ -465,7 +465,7 @@ export default function CheckoutPage() {
 
             {/* ── ข้อมูลบัตร ── */}
             <div className="checkout-card">
-              <h2 className="checkout-section-title">💳 ข้อมูลการชำระเงิน</h2>
+              <h2 className="checkout-section-title"> ข้อมูลการชำระเงิน</h2>
 
               {savedCards.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
@@ -586,7 +586,7 @@ export default function CheckoutPage() {
               </button>
 
               <p className="checkout-note">
-                🔒 ข้อมูลบัตรของคุณถูกเข้ารหัสและไม่ถูกเก็บไว้ในเซิร์ฟเวอร์
+                 ข้อมูลบัตรของคุณถูกเข้ารหัสและไม่ถูกเก็บไว้ในเซิร์ฟเวอร์
                 <br />
                 การชำระเงินจะถูกจำลองในระบบ (ไม่มีการตัดเงินจริง)
               </p>
