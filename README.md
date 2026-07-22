@@ -3,7 +3,7 @@
 
 <img src="https://via.placeholder.com/160x160/E8C4C4/FFFFFF?text=BA" alt="Belle Aura Logo" width="120" />
 
-# 🌸 Belle Aura
+# 🌸 Maison Véra
 
 ### แพลตฟอร์มอีคอมเมิร์ซเครื่องสำอางและสกินแคร์ครบวงจร
 
