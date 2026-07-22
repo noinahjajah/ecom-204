@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./CheckoutPage.css";
 import Header from "./Header";
-import { getCart, clearCart, saveOrder, getSavedCards, saveCard, computeTotals, getAppliedCoupon } from "./cart";
+import { getCart, clearCart, saveOrder, getSavedCards, saveCard, computeTotals, getAppliedCoupon, deductStock } from "./cart";
 import {
   formatCardNumber,
   formatExpiry,
@@ -175,6 +175,7 @@ export default function CheckoutPage() {
       };
 
       saveOrder(newOrder);
+      deductStock(cart);
       clearCart();
       setCart([]);
       setLoading(false);

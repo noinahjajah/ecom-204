@@ -290,7 +290,7 @@ export default function Makeup() {
                   <p className="mk-product-desc">{p.desc}</p>
                   <div className="mk-product-price">
                     {p.oldPrice && <span className="old">฿{p.oldPrice}</span>}
-                    ฿{p.price}
+                    {p.price}
                   </div>
                 </div>
               </a>

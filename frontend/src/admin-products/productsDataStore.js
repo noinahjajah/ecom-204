@@ -480,6 +480,75 @@ export function importProductsJSON(jsonText, { actor = "Admin" } = {}) {
   return next;
 }
 
+/**
+ * ตัดสต็อกหลังจากคำสั่งซื้อชำระเงินสำเร็จ (เรียกจาก CheckoutPage.jsx ผ่าน cart.js)
+ * items: รายการสินค้าจากตะกร้า [{ id, name, sku, variant, qty }, ...]
+ * จับคู่สินค้าแบบเดียวกับ cart.js (id → ชื่อ (slugify) → sku) แล้วลด stockTotal
+ * และลด stock ของ variant ที่ตรงกัน (ถ้าสินค้ามี variants และ item ระบุ variant มา)
+ */
+export function decrementStockForOrder(items, { actor = "system:checkout" } = {}) {
+  const all = ensureSeeded();
+  const at = nowIso();
+  const list = Array.isArray(items) ? items : [];
+
+  function findProduct(item) {
+    return (
+      all.find((p) => p.id === item.id) ||
+      all.find((p) => slugify(p.name || "") === slugify(item.name || "")) ||
+      all.find((p) => p.sku === item.sku) ||
+      null
+    );
+  }
+
+  function variantMatches(variant, item) {
+    if (variant.sku && item.variant && variant.sku === item.variant) return true;
+    const optionValues = Object.values(variant.options || {});
+    return optionValues.some((v) => v === item.variant);
+  }
+
+  const updated = all.map((product) => {
+    const matchedItems = list.filter((item) => findProduct(item)?.id === product.id);
+    if (matchedItems.length === 0) return product;
+
+    let stockTotal = Number(product.stockTotal) || 0;
+    let variants = Array.isArray(product.variants) ? product.variants.map((v) => ({ ...v })) : [];
+
+    matchedItems.forEach((item) => {
+      const qty = Number(item.qty) || 0;
+      stockTotal = Math.max(0, stockTotal - qty);
+
+      if (variants.length > 0 && item.variant) {
+        variants = variants.map((v) =>
+          variantMatches(v, item) ? { ...v, stock: Math.max(0, Number(v.stock || 0) - qty) } : v
+        );
+      }
+    });
+
+    const next = {
+      ...product,
+      stockTotal,
+      variants,
+      updatedAt: at,
+    };
+    next.statusDetail = { ...product.statusDetail, outOfStock: stockTotal <= 0 };
+    next.activityLogs = [
+      ...(product.activityLogs || []),
+      {
+        who: actor,
+        at,
+        before: { stockTotal: product.stockTotal },
+        after: { stockTotal },
+        note: "Stock deducted from order",
+      },
+    ];
+
+    return next;
+  });
+
+  saveAll(updated);
+  return updated;
+}
+
 export function computeDashboardStats(products) {
   const all = products || [];
   const total = all.length;

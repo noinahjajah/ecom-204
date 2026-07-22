@@ -336,7 +336,7 @@ export default function Skincare() {
                     <p className="sc-product-ingredient">สารสำคัญ: {p.ingredient}</p>
                     <div className="sc-product-price">
                       {p.oldPrice && <span className="old">฿{p.oldPrice}</span>}
-                      ฿{p.price}
+                      {p.price}
                     </div>
                   </div>
                 </a>

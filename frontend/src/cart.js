@@ -7,7 +7,7 @@
  * และ CartPage (แสดง/แก้ไขรายการจริง)
  */
 
-import { isProductAvailable, listProducts } from "./admin-products/productsDataStore";
+import { isProductAvailable, listProducts, decrementStockForOrder } from "./admin-products/productsDataStore";
 
 const CART_KEY = "mv_cart";
 const EVENT_NAME = "cartchange";
@@ -234,6 +234,14 @@ export function removeFromCart(id) {
 export function clearCart() {
   writeCart([]);
   clearAppliedCoupon();
+}
+
+/**
+ * ตัดสต็อกของสินค้าตามรายการที่เพิ่งชำระเงินสำเร็จ เรียกจาก CheckoutPage.jsx
+ * หลัง saveOrder สำเร็จ (ก่อนหรือหลัง clearCart ก็ได้ เพราะรับ items เป็น array ตรงๆ)
+ */
+export function deductStock(items) {
+  return decrementStockForOrder(items);
 }
 
 /* ── Orders ──
