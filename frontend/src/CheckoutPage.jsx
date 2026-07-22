@@ -285,7 +285,7 @@ export default function CheckoutPage() {
 
             {trackingInfo && (
               <div className="checkout-tracking">
-                <p>🚚 ขนส่ง: <b>{trackingInfo.carrier}</b></p>
+                <p> ขนส่ง: <b>{trackingInfo.carrier}</b></p>
                 <p>เลขพัสดุ: <b>{trackingInfo.trackingNumber}</b></p>
                 <a
                   href={trackingInfo.trackingUrl}
