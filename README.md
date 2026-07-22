@@ -19,6 +19,7 @@
 [![University Project](https://img.shields.io/badge/university%20project-CSI204-blue?style=flat-square)](#)
 [![Version](https://img.shields.io/badge/version-0.1.0-lightgrey?style=flat-square)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](#license)
+[![UAT](https://docs.google.com/spreadsheets/d/1aDWM5ZH85Iib7VZkZMBCY0ugO4ibHj9xapyfhQxtR64/edit?usp=sharing)](#)
 
 📖 [เอกสารระบบ](#-เอกสารประกอบโครงงาน) ·
 
