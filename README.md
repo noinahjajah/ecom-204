@@ -225,10 +225,10 @@
  
 ### 🎨 Wireframe / Prototype
  
-ใส่อันนี้
- 
-- ครอบคลุมหน้า Dashboard Overview, จัดการสินค้า (พร้อม Bulk Action / Export CSV), จัดการสต็อก, จัดการคำสั่งซื้อ และจัดการการชำระเงิน
-- ออกแบบ Layout เบื้องต้นด้วย **Figma** ก่อนแปลงเป็นโค้ดจริง
+<img width="1068" height="1640" alt="wi" src="https://github.com/user-attachments/assets/881aeed5-ded5-4a18-aa89-a9ba99d36731" />
+
+https://www.figma.com/design/4DE9xSQ5q0L19YMTQ7WO5m/Untitled?node-id=0-1&m=dev&t=A3I9SIY3tRLKjp8d-1
+
 ### 🗂️ Data Schema (JSON)
  
 โครงสร้างข้อมูลหลักของระบบ กำหนดเป็น JSON Schema (draft 2020-12) เพื่อใช้ตรวจสอบความถูกต้องของข้อมูลที่เก็บใน `localStorage` ฝั่ง Frontend
