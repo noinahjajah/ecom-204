@@ -36,8 +36,8 @@ export function luhnCheck(cardNumber) {
   let isEven = false;
 
   // วนลูปจากขวาไปซ้าย
-  for (let i = clean.length - 1; i >= 0; i--) {
-    let digit = parseInt(clean.charAt(i), 10);
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let digit = parseInt(digits.charAt(i), 10);
 
     if (isEven) {
       digit *= 2;
@@ -49,36 +49,6 @@ export function luhnCheck(cardNumber) {
   }
 
   return sum % 10 === 0;
-}
-
-/**
- * ดึงเฉพาะตัวเลขออกจากสตริง
- */
-export function onlyDigits(str) {
-  return String(str || "").replace(/\D/g, "");
-}
-
-/**
- * จัดรูปแบบหมายเลขบัตรให้มีช่องว่างทุก 4 ตัว
- */
-export function formatCardNumber(value) {
-  const digits = onlyDigits(value);
-  const groups = [];
-  for (let i = 0; i < digits.length; i += 4) {
-    groups.push(digits.slice(i, i + 4));
-  }
-  return groups.join(" ");
-}
-
-/**
- * จัดรูปแบบวันหมดอายุเป็น MM/YY
- */
-export function formatExpiry(value) {
-  const digits = onlyDigits(value);
-  if (digits.length >= 2) {
-    return digits.slice(0, 2) + "/" + digits.slice(2, 4);
-  }
-  return digits;
 }
 
 /**
