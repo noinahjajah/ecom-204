@@ -205,28 +205,15 @@
 ## 📑 เอกสารประกอบโครงงาน
  
 เอกสารออกแบบทั้งหมดของโครงงาน ตั้งแต่ภาพรวมสถาปัตยกรรม, Use Case, Sequence, Wireframe ไปจนถึง Data Schema — ออกแบบด้วย **draw.io** และ **Figma** ก่อนเริ่มพัฒนาโค้ดจริง
- 
-### 🏗️ System Architecture
- 
-ภาพรวมการทำงานของระบบ ตั้งแต่ฝั่งลูกค้าไปจนถึงฝั่งผู้ดูแลระบบ
- 
-```mermaid
-flowchart LR
-    C["🧑‍🦰 ลูกค้า"] -->|เข้าชม / สั่งซื้อ| W["🌐 เว็บไซต์<br/>HTML · CSS · JavaScript"]
-    W -->|บันทึก / ดึงข้อมูล| DB[("🗄️ ฐานข้อมูล")]
-    DB -->|ข้อมูลสินค้า / ออเดอร์| A["🛠️ Admin Dashboard"]
-    A -->|จัดการสินค้า / สต็อก / ออเดอร์| DB
-```
- 
+  
 ### 🧩 Use Case Diagram
- 
-<img width="876" height="673" alt="{19F85DAD-B806-4972-AE2F-E2087F75D87C}" src="https://github.com/user-attachments/assets/92b063d4-e01c-4859-9bf5-018b696b4bce" />
+ <img width="1223" height="1005" alt="ีuse caes uup" src="https://github.com/user-attachments/assets/d7eb665c-e9cf-42ed-a28a-9660ad71aa41" />
 
 ```
  
 ### 🔀 Sequence Diagram
  
-<img width="409" height="694" alt="image" src="https://github.com/user-attachments/assets/53b6d385-05f1-47f1-8afd-7523a2b095c5" />
+<img width="594" height="1327" alt="re" src="https://github.com/user-attachments/assets/9d9c1107-27a0-4c3d-b322-ba3e80898561" />
 
 ```
  
