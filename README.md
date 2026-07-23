@@ -1,7 +1,4 @@
 
-
-
-
 # 🌸 Maison Véra
 
 ### แพลตฟอร์มอีคอมเมิร์ซเครื่องสำอางและสกินแคร์ครบวงจร
@@ -35,9 +32,12 @@
 - [เป้าหมายทางธุรกิจ](#-เป้าหมายทางธุรกิจ)
 - [ฟีเจอร์ของระบบ](#-ฟีเจอร์ของระบบ)
 - [เทคโนโลยีที่ใช้](#-เทคโนโลยีที่ใช้)
-- [สถาปัตยกรรมระบบ](#-สถาปัตยกรรมระบบ)
-- [การออกแบบ UI](#-การออกแบบ-ui)
-- [การออกแบบ UML](#-การออกแบบ-uml)
+- [เอกสารประกอบโครงงาน](#-เอกสารประกอบโครงงาน)
+  - [System Architecture](#-system-architecture)
+  - [Use Case Diagram](#-use-case-diagram)
+  - [Sequence Diagram](#-sequence-diagram)
+  - [Wireframe / Prototype](#-wireframe--prototype)
+  - [Data Schema (JSON)](#-data-schema-json)
 - [User Acceptance Testing](#-user-acceptance-testing-uat)
 - [SLA และแผนการดูแลระบบหลังส่งมอบ](#-sla-และแผนการดูแลระบบหลังส่งมอบ)
 - [แผนพัฒนาต่อในอนาคต](#-แผนพัฒนาต่อในอนาคต)
@@ -200,10 +200,16 @@
 
 ---
 
-## 🏗️ สถาปัตยกรรมระบบ
-
+---
+ 
+## 📑 เอกสารประกอบโครงงาน
+ 
+เอกสารออกแบบทั้งหมดของโครงงาน ตั้งแต่ภาพรวมสถาปัตยกรรม, Use Case, Sequence, Wireframe ไปจนถึง Data Schema — ออกแบบด้วย **draw.io** และ **Figma** ก่อนเริ่มพัฒนาโค้ดจริง
+ 
+### 🏗️ System Architecture
+ 
 ภาพรวมการทำงานของระบบ ตั้งแต่ฝั่งลูกค้าไปจนถึงฝั่งผู้ดูแลระบบ
-
+ 
 ```mermaid
 flowchart LR
     C["🧑‍🦰 ลูกค้า"] -->|เข้าชม / สั่งซื้อ| W["🌐 เว็บไซต์<br/>HTML · CSS · JavaScript"]
@@ -211,6 +217,306 @@ flowchart LR
     DB -->|ข้อมูลสินค้า / ออเดอร์| A["🛠️ Admin Dashboard"]
     A -->|จัดการสินค้า / สต็อก / ออเดอร์| DB
 ```
+ 
+### 🧩 Use Case Diagram
+ 
+<img width="876" height="673" alt="{19F85DAD-B806-4972-AE2F-E2087F75D87C}" src="https://github.com/user-attachments/assets/92b063d4-e01c-4859-9bf5-018b696b4bce" />
+
+```
+ 
+### 🔀 Sequence Diagram
+ 
+<img width="409" height="694" alt="image" src="https://github.com/user-attachments/assets/53b6d385-05f1-47f1-8afd-7523a2b095c5" />
+
+```
+ 
+### 🎨 Wireframe / Prototype
+ 
+ใส่อันนี้
+ 
+- ครอบคลุมหน้า Dashboard Overview, จัดการสินค้า (พร้อม Bulk Action / Export CSV), จัดการสต็อก, จัดการคำสั่งซื้อ และจัดการการชำระเงิน
+- ออกแบบ Layout เบื้องต้นด้วย **Figma** ก่อนแปลงเป็นโค้ดจริง
+### 🗂️ Data Schema (JSON)
+ 
+โครงสร้างข้อมูลหลักของระบบ กำหนดเป็น JSON Schema (draft 2020-12) เพื่อใช้ตรวจสอบความถูกต้องของข้อมูลที่เก็บใน `localStorage` ฝั่ง Frontend
+ 
+<details>
+<summary><code>product.schema.json</code> — โครงสร้างสินค้า (เก็บใน <code>admin_products_v1</code>)</summary>
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maisonvera.example/schemas/product.schema.json",
+  "title": "Product",
+  "description": "A single product record as stored in localStorage under admin_products_v1 (productsDataStore.js).",
+  "type": "object",
+  "required": [
+    "id", "name", "category", "sku", "price", "cost", "status",
+    "stockTotal", "reservedStock", "lowStockThreshold",
+    "createdAt", "updatedAt", "shipping", "activityLogs"
+  ],
+  "properties": {
+    "id": { "type": "string", "description": "e.g. \"prod_1_sku-serum-001\"" },
+    "name": { "type": "string" },
+    "enName": { "type": "string" },
+    "descriptionShort": { "type": "string" },
+    "details": { "type": "string" },
+    "highlights": { "type": "string", "description": "Newline-separated bullet points" },
+    "countryOfOrigin": { "type": "string" },
+    "manufacturer": { "type": "string" },
+    "category": { "type": "string", "examples": ["สกินแคร์", "เมคอัพ"] },
+    "store": { "type": "string" },
+    "brand": { "type": "string" },
+    "sku": { "type": "string" },
+    "barcode": { "type": "string" },
+ 
+    "price": { "type": "number", "minimum": 0 },
+    "promoPrice": { "type": ["number", "null"], "minimum": 0 },
+    "cost": { "type": "number", "minimum": 0 },
+ 
+    "status": {
+      "type": "string",
+      "enum": ["Active", "OutOfStock", "Hidden", "Pending", "Rejected"]
+    },
+    "statusDetail": {
+      "type": "object",
+      "description": "Denormalized booleans mirroring `status`, used for dashboard filters",
+      "properties": {
+        "pending": { "type": "boolean" },
+        "rejected": { "type": "boolean" },
+        "hidden": { "type": "boolean" },
+        "active": { "type": "boolean" },
+        "draft": { "type": "boolean" },
+        "outOfStock": { "type": "boolean" }
+      }
+    },
+ 
+    "mainImage": { "type": "string", "description": "URL or base64 data: URI" },
+    "gallery": { "type": "array", "items": { "type": "string" } },
+    "image360": { "type": "string" },
+    "video": { "type": "array", "items": { "type": "string" } },
+ 
+    "stockTotal": { "type": "integer", "minimum": 0 },
+    "reservedStock": { "type": "integer", "minimum": 0 },
+    "lowStockThreshold": { "type": "integer", "minimum": 0 },
+    "warehouses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "stock": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+ 
+    "variantOptions": {
+      "type": "array",
+      "description": "Flat list of selectable option labels, e.g. shades or sizes",
+      "items": { "type": "string" }
+    },
+    "variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sku", "price", "stock"],
+        "properties": {
+          "sku": { "type": "string" },
+          "price": { "type": "number", "minimum": 0 },
+          "stock": { "type": "integer", "minimum": 0 },
+          "barcode": { "type": "string" },
+          "image": { "type": "string" },
+          "options": {
+            "type": "object",
+            "description": "e.g. { \"shade\": \"Rose\", \"size\": \"30ml\" }",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    },
+    "attributes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" },
+          "value": { "type": "string" }
+        }
+      }
+    },
+    "tags": { "type": "array", "items": { "type": "string" } },
+ 
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+ 
+    "soldCount": { "type": "integer", "minimum": 0 },
+    "views": { "type": "integer", "minimum": 0 },
+    "clicks": { "type": "integer", "minimum": 0 },
+    "wishlist": { "type": "integer", "minimum": 0 },
+    "ratingAvg": { "type": "number", "minimum": 0, "maximum": 5 },
+    "ratingCount": { "type": "integer", "minimum": 0 },
+    "ratingReportedCount": { "type": "integer", "minimum": 0 },
+ 
+    "activityLogs": {
+      "type": "array",
+      "description": "Audit trail; system:checkout entries are the only real source of sales data (see salesMetrics.js)",
+      "items": {
+        "type": "object",
+        "required": ["who", "at", "note"],
+        "properties": {
+          "who": {
+            "type": "string",
+            "examples": ["Admin", "system:checkout"]
+          },
+          "at": { "type": "string", "format": "date-time" },
+          "before": {
+            "type": ["object", "null"],
+            "description": "Snapshot of changed fields before the edit; shape varies by action",
+            "properties": {
+              "status": { "type": "string" },
+              "price": { "type": "number" },
+              "promoPrice": { "type": ["number", "null"] },
+              "stockTotal": { "type": "integer" },
+              "category": { "type": "string" }
+            }
+          },
+          "after": {
+            "type": ["object", "null"],
+            "properties": {
+              "status": { "type": "string" },
+              "price": { "type": "number" },
+              "promoPrice": { "type": ["number", "null"] },
+              "stockTotal": { "type": "integer" },
+              "category": { "type": "string" }
+            }
+          },
+          "note": {
+            "type": "string",
+            "examples": ["Created product", "Bulk update", "Upsert product", "Stock deducted from order"]
+          }
+        }
+      }
+    },
+ 
+    "seo": {
+      "type": "object",
+      "properties": {
+        "metaTitle": { "type": "string" },
+        "metaDescription": { "type": "string" },
+        "urlSlug": { "type": "string" },
+        "keywords": { "type": "string" }
+      }
+    },
+ 
+    "shipping": {
+      "type": "object",
+      "required": ["shippingFee", "freeShipping"],
+      "properties": {
+        "weightKg": { "type": "number" },
+        "widthCm": { "type": "number" },
+        "heightCm": { "type": "number" },
+        "lengthCm": { "type": "number" },
+        "carrier": { "type": "string", "examples": ["kerry"] },
+        "shippingFee": { "type": "number", "minimum": 0 },
+        "freeShipping": { "type": "boolean" }
+      }
+    },
+ 
+    "completeness": {
+      "type": "object",
+      "properties": {
+        "hasImage": { "type": "boolean" },
+        "isComplete": { "type": "boolean" }
+      }
+    }
+  }
+}
+```
+ 
+</details>
+<details>
+<summary><code>cart.schema.json</code> — โครงสร้างตะกร้าสินค้าและคูปอง (เก็บใน <code>localStorage</code>)</summary>
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maisonvera.example/schemas/cart.schema.json",
+  "title": "Cart",
+  "description": "Shapes stored in localStorage by cart.js: the cart array itself, applied coupon code, and the coupons lookup table.",
+  "$defs": {
+    "cartItem": {
+      "type": "object",
+      "required": ["id", "name", "category", "price", "qty"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Matches a Product.id from product.schema.json"
+        },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "variant": {
+          "type": "string",
+          "description": "Selected variant label, or \"\" if the product has no variants"
+        },
+        "price": { "type": "number", "minimum": 0 },
+        "image": { "type": ["string", "null"] },
+        "qty": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Capped at getAvailableQty(item) — the product's (or matching variant's) remaining stock"
+        }
+      }
+    },
+    "coupon": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["percent", "fixed", "free_shipping"]
+        },
+        "value": {
+          "type": "number",
+          "description": "Percent (0-100) for type=percent, currency amount for type=fixed, ignored for free_shipping"
+        },
+        "minSpend": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum subtotal required to apply this coupon"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "cart": {
+      "type": "array",
+      "description": "localStorage key holding the cart array",
+      "items": { "$ref": "#/$defs/cartItem" }
+    },
+    "appliedCoupon": {
+      "type": ["string", "null"],
+      "description": "Coupon code currently applied, or null"
+    },
+    "coupons": {
+      "type": "object",
+      "description": "Lookup table keyed by uppercase coupon code",
+      "additionalProperties": { "$ref": "#/$defs/coupon" }
+    },
+    "totals": {
+      "type": "object",
+      "description": "Shape returned by computeTotals(cart, appliedCoupon)",
+      "properties": {
+        "subtotal": { "type": "number", "minimum": 0 },
+        "discount": { "type": "number", "minimum": 0 },
+        "shippingFee": { "type": "number", "minimum": 0 },
+        "total": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}
+```
+ 
+</details>
+
 ---
 
 # 🧪 User Acceptance Testing (UAT)
@@ -348,7 +654,7 @@ flowchart LR
 
 <div align="center">
 
-Made with 🩷 by **Belle Aura Team**
+Made with 🩷 by **Maison Véra Team**
 
 ขอบคุณที่แวะมาเยี่ยมชม repository นี้ 🌸
 
