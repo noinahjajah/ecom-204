@@ -145,7 +145,7 @@
 - ✅ ขั้นตอนชำระเงิน (Checkout)
 - ✅ โปรไฟล์ผู้ใช้
 - ✅ ประวัติคำสั่งซื้อ
-- ⏳ รีวิวสินค้า
+
 
 </td>
 <td valign="top" width="50%">
@@ -227,10 +227,10 @@ flowchart LR
 | PDP-02 | Product | ปุ่มเพิ่มสินค้า | ✅ Pass |
 | CART-01 | Cart | เพิ่ม/ลดจำนวนสินค้า | ✅ Pass |
 | CART-02 | Cart | ใช้งานโค้ดส่วนลด | ❌ Fail |
-| CHK-01 | Checkout | ฟอร์มการจัดส่ง | ❌ Fail |
-| CHK-02 | Checkout | ตรวจสอบบัตรเครดิต | ❌ Fail |
-| TRK-01 | Order Tracking | แสดงข้อมูลคำสั่งซื้อ | ❌ Fail |
-| TRK-02 | Order Tracking | ติดตามสถานะการจัดส่ง | ❌ Fail |
+| CHK-01 | Checkout | ฟอร์มการจัดส่ง | ✅ Pass |
+| CHK-02 | Checkout | ตรวจสอบบัตรเครดิต | ✅ Pass |
+| TRK-01 | Order Tracking | แสดงข้อมูลคำสั่งซื้อ | ✅ Pass |
+| TRK-02 | Order Tracking | ติดตามสถานะการจัดส่ง | ✅ Pass |
 | ADM-01 | Admin Dashboard | Dashboard Overview | ✅ Pass |
 | ADM-04 | Admin Products | จัดการสถานะสินค้า | ✅ Pass |
 | ADM-05 | Admin Products | Export CSV | ✅ Pass |
@@ -240,8 +240,8 @@ flowchart LR
 
 | ผลการทดสอบ | จำนวน |
 |------------|-------:|
-| ✅ ผ่าน (Pass) | **11** |
-| ❌ ไม่ผ่าน (Fail) | **5** |
+| ✅ ผ่าน (Pass) | **15** |
+| ❌ ไม่ผ่าน (Fail) | **1** |
 | 📋 รวมทั้งหมด | **16 Test Cases** |
 
 ## ⚠️ Known Issues
