@@ -1,7 +1,23 @@
 import React, { useState, useMemo, useEffect } from "react";
 import "./CartPage.css";
 import Header from "./Header";
-import { getCart, updateQty as storeUpdateQty, removeFromCart, subscribeCart } from "./cart";
+import {
+  getCart,
+  updateQty as storeUpdateQty,
+  removeFromCart,
+  subscribeCart,
+  coupons,
+  getAppliedCoupon,
+  setAppliedCoupon as storeSetAppliedCoupon,
+  clearAppliedCoupon,
+  computeTotals,
+  FREE_SHIPPING_THRESHOLD,
+  getAvailableQty,
+} from "./cart";
+import { supabase } from "./supabaseClient";
+
+// key ที่ใช้จำหน้าที่ผู้ใช้ตั้งใจจะไป ก่อนถูกเด้งไป login (ให้ AuthCallback.jsx อ่านแล้วเด้งกลับมาที่นี่)
+const REDIRECT_AFTER_LOGIN_KEY = "mv_redirect_after_login";
 
 /**
  * CartPage — หน้าตะกร้าสินค้า เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra
@@ -13,15 +29,6 @@ import { getCart, updateQty as storeUpdateQty, removeFromCart, subscribeCart } f
  * และซิงก์กับปุ่ม "หยิบใส่ตะกร้า" ในหน้า Home / Skincare / Makeup รวมถึงตัวเลขบนไอคอน
  * ตะกร้าใน Header แบบเรียลไทม์ (เพราะแต่ละหน้าโหลดแยกกันจริง ไม่มี router/context ให้แชร์ state)
  */
-
-const coupons = {
-  SAVE10: { type: "percent", value: 10, minSpend: 0, max: 300 },
-  FREESHIP: { type: "free_shipping", minSpend: 0 },
-};
-
-// ตรงกับข้อความใน announcement bar ของ Header ("จัดส่งฟรีทุกออเดอร์ตั้งแต่ 1,500 บาท")
-const FREE_SHIPPING_THRESHOLD = 1500;
-const SHIPPING_FEE = 60;
 
 function formatTHB(n) {
   return n.toLocaleString("th-TH") + " บาท";
@@ -61,42 +68,31 @@ const IconBag = () => (
 export default function CartPage() {
   const [cart, setCart] = useState(() => getCart());
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  // คูปองที่ apply ไว้ อ่าน/เขียนผ่าน localStorage (cart.js) ไม่ใช้ state ลอย ๆ
+  // เพื่อให้หน้า Checkout อ่านค่าเดียวกันได้ ตัวเลขจะได้ตรงกันเป๊ะทั้งสองหน้า
+  const [appliedCoupon, setAppliedCoupon] = useState(() => getAppliedCoupon());
   const [couponMsg, setCouponMsg] = useState({ text: "", type: "" });
 
   // โหลดตะกร้าล่าสุดตอน mount และคอยฟังการเปลี่ยนแปลง (เช่น เพิ่มสินค้าจากแท็บ/หน้าอื่น)
   useEffect(() => {
     setCart(getCart());
-    const unsubscribe = subscribeCart((next) => setCart(next));
+    setAppliedCoupon(getAppliedCoupon());
+    const unsubscribe = subscribeCart((next) => {
+      setCart(next);
+      setAppliedCoupon(getAppliedCoupon());
+    });
     return unsubscribe;
   }, []);
 
-  const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price * item.qty, 0),
-    [cart]
+  // คำนวณยอดรวม/ส่วนลด/ค่าส่ง/ยอดสุทธิ จากฟังก์ชันเดียวกับที่ CheckoutPage ใช้
+  // (อ่าน cart + คูปองจาก localStorage ชุดเดียวกัน) เพื่อให้ตัวเลขตรงกันทั้งสองหน้าเสมอ
+  const { subtotal, discount: couponDiscount, shippingFee, total } = useMemo(
+    () => computeTotals(cart, appliedCoupon),
+    [cart, appliedCoupon]
   );
 
-  const couponDiscount = useMemo(() => {
-    if (!appliedCoupon) return 0;
-    const c = coupons[appliedCoupon];
-    if (!c) return 0;
-    if (c.type === "percent") return Math.min(subtotal * (c.value / 100), c.max ?? Infinity);
-    if (c.type === "fixed") return Math.min(c.value, subtotal);
-    return 0;
-  }, [appliedCoupon, subtotal]);
-
-  const isFreeShippingCoupon =
-    appliedCoupon && coupons[appliedCoupon]?.type === "free_shipping";
-
-  const shippingFee =
-    cart.length === 0
-      ? 0
-      : isFreeShippingCoupon || subtotal >= FREE_SHIPPING_THRESHOLD
-      ? 0
-      : SHIPPING_FEE;
-
-  const total = Math.max(subtotal - couponDiscount, 0) + shippingFee;
   const amountToFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - subtotal, 0);
+  const isFreeShippingCoupon = appliedCoupon && coupons[appliedCoupon]?.type === "free_shipping";
   const itemCount = cart.reduce((n, item) => n + item.qty, 0);
 
   function updateQty(id, delta) {
@@ -122,14 +118,30 @@ export default function CartPage() {
       setCouponMsg({ text: `ต้องซื้อขั้นต่ำ ${formatTHB(c.minSpend)} เพื่อใช้โค้ดนี้`, type: "error" });
       return;
     }
+    storeSetAppliedCoupon(code);
     setAppliedCoupon(code);
     setCouponMsg({ text: "ใช้ส่วนลดสำเร็จ", type: "success" });
   }
 
   function removeCoupon() {
+    clearAppliedCoupon();
     setAppliedCoupon(null);
     setCouponCode("");
     setCouponMsg({ text: "", type: "" });
+  }
+
+  async function handleCheckout(e) {
+    e.preventDefault();
+    const { data } = await supabase.auth.getSession();
+
+    if (!data.session) {
+      // ยังไม่ login → จำไว้ว่าจะกลับมาหน้า checkout แล้วเด้งไป login ก่อน
+      window.localStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, "/checkout");
+      window.location.href = "/login";
+      return;
+    }
+
+    window.location.href = "/checkout";
   }
 
   return (
@@ -166,7 +178,10 @@ export default function CartPage() {
                 <span>ราคารวม</span>
               </div>
 
-              {cart.map((item) => (
+              {cart.map((item) => {
+                const availableQty = getAvailableQty(item);
+                const atMax = Number.isFinite(availableQty) && item.qty >= availableQty;
+                return (
                 <div className="cart-item" key={item.id}>
                   <div className="cart-item-main">
                     <div className="cart-item-thumb">
@@ -182,6 +197,11 @@ export default function CartPage() {
                       <span className="cart-item-category">{item.category}</span>
                       <span className="cart-item-name">{item.name}</span>
                       <span className="cart-item-variant">{item.variant}</span>
+                      {atMax && (
+                        <span style={{ fontSize: 11.5, color: "#8b4a2b", fontWeight: 600 }}>
+                          สินค้าเหลือสูงสุด {availableQty} ชิ้น ในตะกร้าแล้ว
+                        </span>
+                      )}
                       <span className="cart-item-price-mobile">{formatTHB(item.price)}</span>
                       <button className="cart-item-remove" onClick={() => removeItem(item.id)} aria-label="ลบสินค้า">
                         <IconClose /> ลบ
@@ -194,14 +214,20 @@ export default function CartPage() {
                       <IconMinus />
                     </button>
                     <span>{item.qty}</span>
-                    <button onClick={() => updateQty(item.id, 1)} aria-label="เพิ่มจำนวน">
+                    <button
+                      onClick={() => updateQty(item.id, 1)}
+                      disabled={atMax}
+                      aria-label="เพิ่มจำนวน"
+                      title={atMax ? `สินค้าเหลือสูงสุด ${availableQty} ชิ้น` : undefined}
+                    >
                       <IconPlus />
                     </button>
                   </div>
 
                   <div className="cart-item-total">{formatTHB(item.price * item.qty)}</div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* ── สรุปคำสั่งซื้อ ── */}
@@ -258,7 +284,7 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <a href="/checkout" className="btn-primary cart-checkout-btn">
+              <a href="/checkout" className="btn-primary cart-checkout-btn" onClick={handleCheckout}>
                 ดำเนินการชำระเงิน
               </a>
               <a href="/" className="btn-ghost cart-continue-link">

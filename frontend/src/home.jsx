@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./home.css";
 import Header from "./Header";
 import { addToCart, slugify } from "./cart";
+import { isProductAvailable, listProducts } from "./admin-products/productsDataStore";
 
 /**
  * Home — หน้าแรกเว็บอีคอมเมิร์ซเครื่องสำอาง
@@ -13,21 +14,21 @@ import { addToCart, slugify } from "./cart";
  */
 
 const CATEGORIES = [
-  {
-    name: "สกินแคร์",
-    en: "Skincare",
-    img: "https://placehold.co/600x800/efe1d8/221f1c?text=Skincare",
-  },
-  {
-    name: "เมคอัพ",
-    en: "Makeup",
-    img: "https://placehold.co/600x800/d8cfc2/221f1c?text=Makeup",
-  },
-  {
-    name: "น้ำหอม",
-    en: "Fragrance",
-    img: "https://placehold.co/600x800/ede6da/221f1c?text=Fragrance",
-  },
+  // {
+  //   name: "สกินแคร์",
+  //   en: "Skincare",
+  //   img: "https://placehold.co/600x800/efe1d8/221f1c?text=Skincare",
+  // },
+  // {
+  //   name: "เมคอัพ",
+  //   en: "Makeup",
+  //   img: "https://placehold.co/600x800/d8cfc2/221f1c?text=Makeup",
+  // },
+  // {
+  //   name: "น้ำหอม",
+  //   en: "Fragrance",
+  //   img: "https://placehold.co/600x800/ede6da/221f1c?text=Fragrance",
+  // },
 ];
 
 const PRODUCTS = [
@@ -87,8 +88,33 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [justAdded, setJustAdded] = useState(null);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const allProducts = listProducts().filter((p) => isProductAvailable(p));
+    setProducts(allProducts);
+  }, []);
+
+  const displayProducts = useMemo(() => {
+    return products.map((product) => {
+      if (product?.name && (product?.descriptionShort || product?.desc)) {
+        return {
+          id: product.id || slugify(product.name),
+          name: product.name,
+          desc: product.descriptionShort || product.desc || "",
+          price: product.price ?? 0,
+          oldPrice: product.promoPrice ?? null,
+          tag: product.tags?.[0] || null,
+          img: product.mainImage || product.gallery?.[0] || product.img || "https://placehold.co/500x625/ffffff/ad8a55?text=Product",
+        };
+      }
+      return product;
+    });
+  }, [products]);
 
   const handleAddToCart = (p) => {
+    if (!isProductAvailable(p)) return;
+
     addToCart({
       id: slugify(p.name),
       name: p.name,
@@ -124,10 +150,6 @@ export default function Home() {
             ค้นพบสกินแคร์และเมคอัพที่คัดสรรเพื่อผิวคุณโดยเฉพาะ
             เนื้อสัมผัสบางเบา ซึมซาบไว ให้ผิวเปล่งประกายอย่างเป็นธรรมชาติ
           </p>
-          <div className="hero-actions">
-            <button className="btn-primary">ช้อปคอลเลกชันใหม่</button>
-            <button className="btn-ghost">ดูเรื่องราวแบรนด์</button>
-          </div>
         </div>
         <div className="hero-visual">
           <div className="droplet-frame">
@@ -152,29 +174,6 @@ export default function Home() {
           <span>Made With Care</span>
         </div>
       </div>
-
-      {/* Categories */}
-      <section className="section" id="categories">
-        <div className="section-head">
-          <div>
-            <span className="eyebrow">Shop by Category</span>
-            <h2 className="display section-title">เลือกช้อปตามหมวดหมู่</h2>
-          </div>
-        </div>
-        <div className="category-rail">
-          {CATEGORIES.map((c) => (
-            <div className="category-card" key={c.en}>
-              <img className="bg" src={c.img} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              <div className="overlay" />
-              <div className="label">
-                <span className="eyebrow">{c.en}</span>
-                <div className="name display">{c.name}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Products */}
       <section className="section" id="products">
         <div className="section-head">
@@ -185,27 +184,32 @@ export default function Home() {
           <a href="#all" className="section-link">Best seller</a>
         </div>
         <div className="product-grid">
-          {PRODUCTS.map((p) => (
+          {displayProducts.map((p) => (
             <div className="product-card" key={p.name}>
-              <div className="product-media">
-                {p.tag && <span className="product-tag">{p.tag}</span>}
-                <img src={p.img} alt={p.name} />
-                <button className="product-quickadd" onClick={() => handleAddToCart(p)}>
-                  {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
-                </button>
-              </div>
-              <div className="product-info">
-                <span className="eyebrow">Maison Véra</span>
-                <h3 className="product-name">{p.name}</h3>
-                <p className="product-desc">{p.desc}</p>
-                <div className="product-price">
-                  {p.oldPrice && <span className="old">฿{p.oldPrice}</span>}
-                  ฿{p.price}
+              <a
+                className="product-card-link"
+                href={`/product?id=${encodeURIComponent(slugify(p.name))}`}
+                aria-label={`ดูรายละเอียดสินค้า ${p.name}`}
+                style={{ color: "inherit", textDecoration: "none" }}
+              >
+                <div className="product-media">
+                  {p.tag && <span className="product-tag">{p.tag}</span>}
+                  <img src={p.img} alt={p.name} />
                 </div>
-              </div>
+                <div className="product-info">
+                  <span className="eyebrow">Maison Véra</span>
+                  <h3 className="product-name">{p.name}</h3>
+                  <p className="product-desc">{p.desc}</p>
+                  <div className="product-price">
+                    {p.oldPrice && <span className="old">฿{p.oldPrice}</span>}
+                    ฿{p.price}
+                  </div>
+                </div>
+              </a>
             </div>
           ))}
         </div>
+
       </section>
 
       {/* Philosophy / pull quote */}
@@ -308,7 +312,7 @@ export default function Home() {
             <ul>
               <li><a href="#about">เกี่ยวกับเรา</a></li>
               <li><a href="#journal">Journal</a></li>
-              <li><a href="#store">สาขาหน้าร้าน</a></li>
+              {/* <li><a href="#store">สาขาหน้าร้าน</a></li> */}
             </ul>
           </div>
         </div>

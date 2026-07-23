@@ -1,202 +1,325 @@
-import React, { useEffect, useMemo, useState } from "react";
-import "./CheckoutPage.css";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Header from "./Header";
-import { getCart, clearCart, saveOrder, getSavedCards, saveCard } from "./cart";
 import {
-  formatCardNumber,
-  formatExpiry,
-  luhnCheck,
-  detectCardBrand,
-  isExpiryValid,
-  isCvvValid,
-  onlyDigits,
-  generateOrderId,
-} from "./payment";
-
-/**
- * CheckoutPage — หน้าชำระเงินจริง (จบ flow end-to-end): กรอกที่อยู่ → เลือกวิธีชำระ →
- * ตรวจสอบบัตรด้วย Luhn algorithm จริง → จำลองการส่งไปเกตเวย์ → สร้างเลขคำสั่งซื้อ →
- * ล้างตะกร้า → หน้าสำเร็จ
- *
- * ⚠️ หมายเหตุความปลอดภัย: โปรเจกต์นี้ยังไม่ได้เชื่อมต่อผู้ให้บริการชำระเงินจริง (เช่น Omise,
- * Stripe, 2C2P) จึงไม่มีการตัดเงินจริงเกิดขึ้น — เป็นการจำลองที่ตรวจสอบข้อมูลบัตรแบบเดียวกับ
- * ระบบจริง (Luhn, brand, วันหมดอายุ, CVV) แต่ไม่มีการเก็บเลขบัตรเต็มหรือ CVV ไว้ที่ใดเลย
- * เก็บเฉพาะ brand + เลข 4 ตัวท้าย + วันหมดอายุ เพื่อใช้แสดงผล "บัตรที่บันทึกไว้" เท่านั้น
- * ถ้าต้องการตัดเงินจริง ต้องสมัคร merchant account กับเกตเวย์ที่รองรับ PCI-DSS แล้วเรียก API
- * ฝั่ง backend (ห้ามส่งเลขบัตรเต็มผ่าน client ตรงไปเก็บเอง)
- */
-
-const FREE_SHIPPING_THRESHOLD = 1500;
-const SHIPPING_FEE = 60;
+  getCart,
+  clearCart,
+  computeTotals,
+  getAppliedCoupon,
+  clearAppliedCoupon,
+  getSavedCards,
+  saveCard,
+  getSavedAddresses,
+  saveAddress,
+  subscribeAddresses,
+  saveOrder,
+  deductStock,
+  createRouvoOrder,
+  createSuperbetTracking,
+  getOrders,
+} from "./cart";
+import { onlyDigits, formatCardNumber, formatExpiry, luhnCheck, detectCardBrand, isExpiryValid, isCvvValid, generateOrderId } from "./payment";
+import "./CheckoutPage.css";
 
 function formatTHB(n) {
-  return n.toLocaleString("th-TH") + " บาท";
+  return (Number(n) || 0).toLocaleString("th-TH") + " บาท";
 }
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState(() => getCart());
   const [savedCards, setSavedCards] = useState(() => getSavedCards());
+  const [savedAddresses, setSavedAddresses] = useState(() => getSavedAddresses());
   const [selectedSavedCardId, setSelectedSavedCardId] = useState("new");
-  const [paymentMethod, setPaymentMethod] = useState("card"); // card | cod | promptpay
-  const [saveThisCard, setSaveThisCard] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState(null);
-  const [errors, setErrors] = useState({});
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState("new");
+  const [useNewAddress, setUseNewAddress] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [orderId, setOrderId] = useState("");
+  const [trackingInfo, setTrackingInfo] = useState(null);
+
+  // Card state (controlled แทน uncontrolled เพื่อให้ format ทำงานได้)
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
+  const [cardName, setCardName] = useState("");
 
   const [shipping, setShipping] = useState({
     fullName: "",
     phone: "",
+    email: "",
     address: "",
+    district: "",
+    province: "",
+    postcode: "",
+    preferredCarrier: "superbet",
   });
 
-  const [card, setCard] = useState({
-    number: "",
-    name: "",
-    expiry: "",
-    cvv: "",
-  });
-
+  // Load cart
   useEffect(() => {
     setCart(getCart());
   }, []);
 
-  const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price * item.qty, 0),
-    [cart]
-  );
-  const shippingFee = cart.length === 0 || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-  const total = subtotal + shippingFee;
-  const brand = detectCardBrand(card.number);
+  // Load addresses
+  useEffect(() => {
+    const unsub = subscribeAddresses(() => {
+      const addrs = getSavedAddresses();
+      setSavedAddresses(addrs);
+      if (addrs.length > 0 && selectedSavedAddressId === "new") {
+        const def = addrs.find((a) => a.isDefault) || addrs[0];
+        setSelectedSavedAddressId(def.id);
+        setUseNewAddress(false);
+        setShipping({
+          fullName: def.fullName || def.name || "",
+          phone: def.phone || "",
+          email: def.email || "",
+          address: def.address || def.line1 || "",
+          district: def.district || def.city || "",
+          province: def.province || def.state || "",
+          postcode: def.postcode || "",
+          preferredCarrier: def.preferredCarrier || "superbet",
+        });
+      }
+    });
+    return () => unsub();
+  }, []);
 
-  function setShippingField(field) {
-    return (e) => {
-      setShipping((prev) => ({ ...prev, [field]: e.target.value }));
-      setErrors((prev) => ({ ...prev, [field]: null }));
-    };
-  }
+  // Load cards
+  useEffect(() => {
+    const cards = getSavedCards();
+    setSavedCards(cards);
+    if (cards.length > 0) setSelectedSavedCardId(cards[0].id);
+  }, []);
 
-  function validate() {
-    const next = {};
-    if (!shipping.fullName.trim()) next.fullName = "กรุณากรอกชื่อผู้รับ";
-    if (!/^0\d{8,9}$/.test(onlyDigits(shipping.phone))) next.phone = "กรุณากรอกเบอร์โทรให้ถูกต้อง";
-    if (!shipping.address.trim()) next.address = "กรุณากรอกที่อยู่จัดส่ง";
+  const totals = useMemo(() => computeTotals(cart), [cart]);
 
-    if (paymentMethod === "card" && selectedSavedCardId === "new") {
-      const digits = onlyDigits(card.number);
-      if (!luhnCheck(digits)) next.cardNumber = "เลขบัตรไม่ถูกต้อง";
-      if (!card.name.trim()) next.cardName = "กรุณากรอกชื่อบนบัตร";
-      if (!isExpiryValid(card.expiry)) next.expiry = "วันหมดอายุไม่ถูกต้องหรือหมดอายุแล้ว";
-      if (!isCvvValid(card.cvv, brand)) next.cvv = "CVV ไม่ถูกต้อง";
+  const handleAddressChange = (field, value) => {
+    setShipping((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSelectAddress = (id) => {
+    setSelectedSavedAddressId(id);
+    if (id === "new") {
+      setUseNewAddress(true);
+      setShipping({
+        fullName: "", phone: "", email: "", address: "",
+        district: "", province: "", postcode: "", preferredCarrier: "superbet",
+      });
+    } else {
+      setUseNewAddress(false);
+      const addr = savedAddresses.find((a) => a.id === id);
+      if (addr) {
+        setShipping({
+          fullName: addr.fullName || addr.name || "",
+          phone: addr.phone || "",
+          email: addr.email || "",
+          address: addr.address || addr.line1 || "",
+          district: addr.district || addr.city || "",
+          province: addr.province || addr.state || "",
+          postcode: addr.postcode || "",
+          preferredCarrier: addr.preferredCarrier || "superbet",
+        });
+      }
+    }
+  };
+
+  const validateShipping = () => {
+    const s = shipping;
+    if (!s.fullName?.trim()) return "กรุณากรอกชื่อ-นามสกุล";
+    if (!s.phone?.trim()) return "กรุณากรอกเบอร์โทรศัพท์";
+    if (!/^0[0-9]{8,9}$/.test(s.phone.replace(/\s/g, ""))) return "เบอร์โทรศัพท์ไม่ถูกต้อง";
+    if (!s.email?.trim()) return "กรุณากรอกอีเมล";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email)) return "อีเมลไม่ถูกต้อง";
+    if (!s.address?.trim()) return "กรุณากรอกที่อยู่";
+    if (!s.district?.trim()) return "กรุณากรอกเขต/อำเภอ";
+    if (!s.province?.trim()) return "กรุณากรอกจังหวัด";
+    if (!s.postcode?.trim()) return "กรุณากรอกรหัสไปรษณีย์";
+    if (!/^\d{5}$/.test(s.postcode)) return "รหัสไปรษณีย์ไม่ถูกต้อง";
+    return "";
+  };
+
+  const validateCard = () => {
+    if (selectedSavedCardId !== "new") return "";
+    const num = onlyDigits(cardNumber);
+    if (num.length < 13 || num.length > 19) return "หมายเลขบัตรต้องมี 13-19 หลัก";
+    if (!luhnCheck(num)) return "หมายเลขบัตรไม่ถูกต้อง (Luhn check failed)";
+    if (!isExpiryValid(cardExpiry)) return "วันหมดอายุไม่ถูกต้อง (รูปแบบ MM/YY)";
+    const brand = detectCardBrand(num);
+    if (!isCvvValid(cardCvc, brand)) return `CVC ไม่ถูกต้อง (${brand === "American Express" ? "ต้อง 4 หลัก" : "ต้อง 3 หลัก"})`;
+    if ((cardName || "").trim().length < 3) return "กรุณากรอกชื่อบนบัตร";
+    return "";
+  };
+
+  const handleCheckout = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    const shipErr = validateShipping();
+    if (shipErr) { setError(shipErr); return; }
+
+    const cardErr = validateCard();
+    if (cardErr) { setError(cardErr); return; }
+
+    if (cart.length === 0) {
+      setError("ตะกร้าสินค้าว่างเปล่า");
+      return;
     }
 
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  }
+    setIsProcessing(true);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (cart.length === 0) return;
-    if (!validate()) return;
+    try {
+      const oid = generateOrderId();
+      const now = new Date().toISOString();
 
-    setLoading(true);
+      // ตัดสต็อก
+      const stockOk = deductStock(cart);
+      if (!stockOk) {
+        setError("สินค้าบางรายการหมดสต็อก กรุณาตรวจสอบตะกร้า");
+        setIsProcessing(false);
+        return;
+      }
 
-    // จำลองเวลาที่ระบบจริงใช้ยืนยันกับเกตเวย์ชำระเงิน
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    let paymentSummary;
-    if (paymentMethod === "card") {
-      let last4, cardBrand, expiry, cardholderName;
-      if (selectedSavedCardId !== "new") {
-        const saved = savedCards.find((c) => c.id === selectedSavedCardId);
-        last4 = saved.last4;
-        cardBrand = saved.brand;
-        expiry = saved.expiry;
-        cardholderName = saved.name;
+      // บัตร
+      let paymentMethod = "บัตรเครดิต";
+      let cardInfo = null;
+      if (selectedSavedCardId === "new") {
+        const num = onlyDigits(cardNumber);
+        const brand = detectCardBrand(num);
+        cardInfo = { brand, last4: num.slice(-4), expiry: cardExpiry, name: cardName };
+        saveCard(cardInfo);
+        paymentMethod = brand;
       } else {
-        const digits = onlyDigits(card.number);
-        last4 = digits.slice(-4);
-        cardBrand = brand;
-        expiry = card.expiry;
-        cardholderName = card.name;
-        if (saveThisCard) {
-          const next = saveCard({ brand: cardBrand, last4, expiry, name: cardholderName });
-          setSavedCards(next);
+        const sc = savedCards.find((c) => c.id === selectedSavedCardId);
+        if (sc) { cardInfo = sc; paymentMethod = sc.brand; }
+      }
+
+      // บันทึกที่อยู่ใหม่
+      let addrId = selectedSavedAddressId;
+      if (useNewAddress || selectedSavedAddressId === "new") {
+        const newAddr = saveAddress({
+          fullName: shipping.fullName,
+          phone: shipping.phone,
+          email: shipping.email,
+          address: shipping.address,
+          district: shipping.district,
+          province: shipping.province,
+          postcode: shipping.postcode,
+          preferredCarrier: shipping.preferredCarrier,
+          isDefault: savedAddresses.length === 0,
+        });
+        addrId = newAddr.id;
+      }
+
+      // สร้างออเดอร์
+      const order = {
+        id: oid,
+        items: cart.map((it) => ({ ...it })),
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        shippingFee: totals.shippingFee,
+        total: totals.total,
+        appliedCoupon: totals.appliedCoupon,
+        status: "รอดำเนินการ",
+        paymentMethod,
+        cardInfo,
+        shippingAddress: { ...shipping },
+        addressId: addrId,
+        customerName: shipping.fullName,
+        customerEmail: shipping.email,
+        carrier: shipping.preferredCarrier || "superbet",
+        createdAt: now,
+        updatedAt: now,
+        statusHistory: [{
+          status: "รอดำเนินการ",
+          at: now,
+          note: "สร้างคำสั่งซื้อ",
+        }],
+      };
+
+      saveOrder(order);
+
+      // 🔄 Sync กับ Rouvo CRM
+      await createRouvoOrder(order);
+
+      // 🔄 สร้าง tracking กับ Superbet
+      const tracking = await createSuperbetTracking(order);
+      if (tracking) {
+        setTrackingInfo(tracking);
+        order.trackingNumber = tracking.trackingNumber;
+        order.trackingUrl = tracking.trackingUrl;
+        order.estimatedDelivery = tracking.estimatedDelivery;
+        order.carrier = tracking.carrier;
+        // อัปเดต order ใน localStorage
+        const orders = getOrders();
+        const idx = orders.findIndex((o) => o.id === oid);
+        if (idx >= 0) {
+          orders[idx] = order;
+          window.localStorage.setItem("mv_orders", JSON.stringify(orders));
         }
       }
-      paymentSummary = { method: "card", brand: cardBrand, last4, expiry, cardholderName };
-    } else if (paymentMethod === "promptpay") {
-      paymentSummary = { method: "promptpay" };
-    } else {
-      paymentSummary = { method: "cod" };
+
+      clearCart();
+      clearAppliedCoupon();
+      setOrderId(oid);
+      setSuccess(true);
+    } catch (err) {
+      console.error(err);
+      setError("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setIsProcessing(false);
     }
+  };
 
-    const newOrder = {
-      id: generateOrderId(),
-      items: cart,
-      subtotal,
-      shippingFee,
-      total,
-      shipping,
-      payment: paymentSummary,
-      status: "paid",
-      createdAt: new Date().toISOString(),
-    };
-
-    saveOrder(newOrder);
-    clearCart();
-    setCart([]);
-    setOrder(newOrder);
-    setLoading(false);
-  }
-
-  if (order) {
+  // ── หน้าสำเร็จ ──
+  if (success) {
     return (
-      <div className="checkout">
+      <div className="checkout-page">
         <Header />
         <div className="checkout-container">
           <div className="checkout-success">
             <div className="checkout-success-icon">✓</div>
-            <h1>ชำระเงินสำเร็จ</h1>
-            <p className="checkout-success-sub">ขอบคุณสำหรับคำสั่งซื้อของคุณ</p>
-            <div className="checkout-success-card">
-              <div className="checkout-success-row">
-                <span>เลขที่คำสั่งซื้อ</span>
-                <strong>{order.id}</strong>
+            <h2>สั่งซื้อสำเร็จ</h2>
+            <p>ขอบคุณสำหรับคำสั่งซื้อ</p>
+            <p className="checkout-order-id">Order ID: <b>{orderId}</b></p>
+
+            {trackingInfo && (
+              <div className="checkout-tracking">
+                <p>🚚 ขนส่ง: <b>{trackingInfo.carrier}</b></p>
+                <p>เลขพัสดุ: <b>{trackingInfo.trackingNumber}</b></p>
+                <a
+                  href={trackingInfo.trackingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-primary"
+                  style={{ display: "inline-block", marginTop: 8 }}
+                >
+                  ติดตามพัสดุ
+                </a>
               </div>
-              <div className="checkout-success-row">
-                <span>ยอดชำระทั้งหมด</span>
-                <strong>{formatTHB(order.total)}</strong>
-              </div>
-              <div className="checkout-success-row">
-                <span>วิธีชำระเงิน</span>
-                <strong>
-                  {order.payment.method === "card"
-                    ? `${order.payment.brand} •••• ${order.payment.last4}`
-                    : order.payment.method === "promptpay"
-                    ? "พร้อมเพย์"
-                    : "เก็บเงินปลายทาง"}
-                </strong>
-              </div>
-              <div className="checkout-success-row">
-                <span>จัดส่งไปที่</span>
-                <strong>{order.shipping.fullName} · {order.shipping.phone}</strong>
-              </div>
+            )}
+
+            <div style={{ marginTop: 20 }}>
+              <a href={`/orders.html?highlight=${encodeURIComponent(orderId)}`} className="btn-primary">
+                ติดตามคำสั่งซื้อ
+              </a>
+              <a href="/" className="btn-secondary" style={{ marginLeft: 10 }}>
+                กลับหน้าแรก
+              </a>
             </div>
-            <a href="/" className="btn-primary">กลับสู่หน้าแรก</a>
           </div>
         </div>
       </div>
     );
   }
 
+  // ── ตะกร้าว่าง ──
   if (cart.length === 0) {
     return (
-      <div className="checkout">
+      <div className="checkout-page">
         <Header />
         <div className="checkout-container">
           <div className="checkout-empty">
-            <p>ยังไม่มีสินค้าในตะกร้าของคุณ</p>
-            <a href="/skincare" className="btn-primary">เลือกซื้อสินค้า</a>
+            <p>ตะกร้าสินค้าว่างเปล่า</p>
+            <a href="/" className="btn-primary">เลือกซื้อสินค้า</a>
           </div>
         </div>
       </div>
@@ -204,7 +327,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="checkout">
+    <div className="checkout-page">
       <Header />
       <div className="checkout-container">
         <nav className="checkout-breadcrumb">
@@ -217,198 +340,270 @@ export default function CheckoutPage() {
 
         <h1 className="checkout-title">ชำระเงิน</h1>
 
-        <form className="checkout-layout" onSubmit={handleSubmit}>
-          <div className="checkout-main">
-            {/* ── ที่อยู่จัดส่ง ── */}
-            <section className="checkout-section">
-              <h2>ที่อยู่จัดส่ง</h2>
-              <div className="checkout-field">
-                <label>ชื่อ-นามสกุลผู้รับ</label>
-                <input
-                  type="text"
-                  value={shipping.fullName}
-                  onChange={setShippingField("fullName")}
-                  placeholder="เช่น สมชาย ใจดี"
-                />
-                {errors.fullName && <span className="checkout-error">{errors.fullName}</span>}
-              </div>
-              <div className="checkout-field">
-                <label>เบอร์โทรศัพท์</label>
-                <input
-                  type="tel"
-                  value={shipping.phone}
-                  onChange={setShippingField("phone")}
-                  placeholder="08xxxxxxxx"
-                />
-                {errors.phone && <span className="checkout-error">{errors.phone}</span>}
-              </div>
-              <div className="checkout-field">
-                <label>ที่อยู่จัดส่ง</label>
-                <textarea
-                  rows={3}
-                  value={shipping.address}
-                  onChange={setShippingField("address")}
-                  placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
-                />
-                {errors.address && <span className="checkout-error">{errors.address}</span>}
-              </div>
-            </section>
+        {error && (
+          <div className="checkout-error" style={{ marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
 
-            {/* ── วิธีชำระเงิน ── */}
-            <section className="checkout-section">
-              <h2>วิธีชำระเงิน</h2>
-              <div className="checkout-pay-methods">
-                {[
-                  { id: "card", label: "บัตรเครดิต / เดบิต" },
-                  { id: "promptpay", label: "พร้อมเพย์" },
-                  { id: "cod", label: "เก็บเงินปลายทาง" },
-                ].map((m) => (
-                  <button
-                    type="button"
-                    key={m.id}
-                    className={`checkout-pay-tab${paymentMethod === m.id ? " is-active" : ""}`}
-                    onClick={() => setPaymentMethod(m.id)}
+        <form onSubmit={handleCheckout} className="checkout-grid">
+          <section className="checkout-main">
+            {/* ── ที่อยู่จัดส่ง ── */}
+            <div className="checkout-card">
+              <h2 className="checkout-section-title">📍 ที่อยู่จัดส่ง</h2>
+
+              {savedAddresses.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div className="admin-field-label">เลือกที่อยู่</div>
+                  <select
+                    className="admin-select"
+                    value={selectedSavedAddressId}
+                    onChange={(e) => handleSelectAddress(e.target.value)}
+                    style={{ width: "100%" }}
                   >
-                    {m.label}
-                  </button>
+                    <option value="new">+ ที่อยู่ใหม่</option>
+                    {savedAddresses.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.fullName || a.name} — {a.address || a.line1} {a.province || a.state} {a.isDefault ? "(ค่าเริ่มต้น)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="checkout-form-grid">
+                <div>
+                  <label className="checkout-label">ชื่อ-นามสกุล *</label>
+                  <input
+                    className="checkout-input"
+                    value={shipping.fullName}
+                    onChange={(e) => handleAddressChange("fullName", e.target.value)}
+                    placeholder="ชื่อ-นามสกุล"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="checkout-label">เบอร์โทรศัพท์ *</label>
+                  <input
+                    className="checkout-input"
+                    value={shipping.phone}
+                    onChange={(e) => handleAddressChange("phone", e.target.value)}
+                    placeholder="0812345678"
+                    required
+                  />
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label className="checkout-label">อีเมล *</label>
+                  <input
+                    className="checkout-input"
+                    type="email"
+                    value={shipping.email}
+                    onChange={(e) => handleAddressChange("email", e.target.value)}
+                    placeholder="email@example.com"
+                    required
+                  />
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label className="checkout-label">ที่อยู่ *</label>
+                  <input
+                    className="checkout-input"
+                    value={shipping.address}
+                    onChange={(e) => handleAddressChange("address", e.target.value)}
+                    placeholder="บ้านเลขที่ ถนน ซอย"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="checkout-label">เขต/อำเภอ *</label>
+                  <input
+                    className="checkout-input"
+                    value={shipping.district}
+                    onChange={(e) => handleAddressChange("district", e.target.value)}
+                    placeholder="เขต/อำเภอ"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="checkout-label">จังหวัด *</label>
+                  <input
+                    className="checkout-input"
+                    value={shipping.province}
+                    onChange={(e) => handleAddressChange("province", e.target.value)}
+                    placeholder="จังหวัด"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="checkout-label">รหัสไปรษณีย์ *</label>
+                  <input
+                    className="checkout-input"
+                    value={shipping.postcode}
+                    onChange={(e) => handleAddressChange("postcode", e.target.value)}
+                    placeholder="10110"
+                    maxLength={5}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="checkout-label">ขนส่งที่ต้องการ</label>
+                  <select
+                    className="checkout-input"
+                    value={shipping.preferredCarrier}
+                    onChange={(e) => handleAddressChange("preferredCarrier", e.target.value)}
+                  >
+                    <option value="superbet">🚚 Superbet Express (1-2 วัน)</option>
+                    <option value="kerry">🚚 Kerry Express (1-3 วัน)</option>
+                    <option value="flash">🚚 Flash Express (1-2 วัน)</option>
+                    <option value="thailandpost">🚚 Thailand Post EMS (2-3 วัน)</option>
+                    <option value="j&t">🚚 J&T Express (1-2 วัน)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* ── ข้อมูลบัตร ── */}
+            <div className="checkout-card">
+              <h2 className="checkout-section-title">💳 ข้อมูลการชำระเงิน</h2>
+
+              {savedCards.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div className="admin-field-label">เลือกบัตร</div>
+                  <select
+                    className="admin-select"
+                    value={selectedSavedCardId}
+                    onChange={(e) => setSelectedSavedCardId(e.target.value)}
+                    style={{ width: "100%" }}
+                  >
+                    <option value="new">+ บัตรใหม่</option>
+                    {savedCards.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.brand} •••• {c.last4} (หมดอายุ {c.expiry})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {selectedSavedCardId === "new" && (
+                <div className="checkout-form-grid">
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label className="checkout-label">
+                      หมายเลขบัตร *
+                      <span style={{ fontSize: 11, color: "var(--taupe)", marginLeft: 8, fontWeight: 400 }}>
+                        (ทดสอบ: 4242 4242 4242 4242)
+                      </span>
+                    </label>
+                    <input
+                      className="checkout-input"
+                      placeholder="0000 0000 0000 0000"
+                      maxLength={23}
+                      autoComplete="cc-number"
+                      value={cardNumber}
+                      onChange={(e) => {
+                        const formatted = formatCardNumber(e.target.value);
+                        setCardNumber(formatted);
+                      }}
+                    />
+                    {cardNumber && (
+                      <span style={{ fontSize: 12, color: "var(--taupe)", marginTop: 4, display: "block" }}>
+                        {detectCardBrand(onlyDigits(cardNumber)) !== "Unknown" && (
+                          <>ประเภทบัตร: <b>{detectCardBrand(onlyDigits(cardNumber))}</b></>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <label className="checkout-label">วันหมดอายุ (MM/YY) *</label>
+                    <input
+                      className="checkout-input"
+                      placeholder="MM/YY"
+                      maxLength={5}
+                      autoComplete="cc-exp"
+                      value={cardExpiry}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9/]/g, "");
+                        setCardExpiry(formatExpiry(val));
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="checkout-label">CVC *</label>
+                    <input
+                      className="checkout-input"
+                      placeholder="123"
+                      maxLength={4}
+                      autoComplete="cc-csc"
+                      value={cardCvc}
+                      onChange={(e) => setCardCvc(onlyDigits(e.target.value).slice(0, 4))}
+                    />
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label className="checkout-label">ชื่อบนบัตร *</label>
+                    <input
+                      className="checkout-input"
+                      placeholder="FULL NAME"
+                      autoComplete="cc-name"
+                      value={cardName}
+                      onChange={(e) => setCardName(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── สรุปยอด ── */}
+          <aside className="checkout-sidebar">
+            <div className="checkout-summary">
+              <h3 className="checkout-summary-title">สรุปคำสั่งซื้อ</h3>
+              <div className="checkout-items">
+                {cart.map((it) => (
+                  <div key={it.id + (it.variant || "")} className="checkout-item">
+                    <div className="checkout-item-info">
+                      <div className="checkout-item-name">{it.name}</div>
+                      {it.variant && <div className="checkout-item-variant">{it.variant}</div>}
+                      <div className="checkout-item-qty">x{it.qty}</div>
+                    </div>
+                    <div className="checkout-item-price">{formatTHB(it.price * it.qty)}</div>
+                  </div>
                 ))}
               </div>
 
-              {paymentMethod === "card" && (
-                <div className="checkout-card-form">
-                  {savedCards.length > 0 && (
-                    <div className="checkout-field">
-                      <label>บัตรที่บันทึกไว้</label>
-                      <select
-                        value={selectedSavedCardId}
-                        onChange={(e) => setSelectedSavedCardId(e.target.value)}
-                      >
-                        <option value="new">ใช้บัตรใหม่</option>
-                        {savedCards.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.brand} •••• {c.last4} (หมดอายุ {c.expiry})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {selectedSavedCardId === "new" && (
-                    <>
-                      <div className="checkout-field">
-                        <label>หมายเลขบัตร {card.number && <span className="checkout-brand">{brand}</span>}</label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={card.number}
-                          onChange={(e) =>
-                            setCard((prev) => ({ ...prev, number: formatCardNumber(e.target.value) }))
-                          }
-                          placeholder="0000 0000 0000 0000"
-                          maxLength={23}
-                        />
-                        {errors.cardNumber && <span className="checkout-error">{errors.cardNumber}</span>}
-                      </div>
-                      <div className="checkout-field">
-                        <label>ชื่อบนบัตร</label>
-                        <input
-                          type="text"
-                          value={card.name}
-                          onChange={(e) => setCard((prev) => ({ ...prev, name: e.target.value }))}
-                          placeholder="เช่น SOMCHAI JAIDEE"
-                        />
-                        {errors.cardName && <span className="checkout-error">{errors.cardName}</span>}
-                      </div>
-                      <div className="checkout-field-row">
-                        <div className="checkout-field">
-                          <label>วันหมดอายุ (MM/YY)</label>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={card.expiry}
-                            onChange={(e) =>
-                              setCard((prev) => ({ ...prev, expiry: formatExpiry(e.target.value) }))
-                            }
-                            placeholder="MM/YY"
-                            maxLength={5}
-                          />
-                          {errors.expiry && <span className="checkout-error">{errors.expiry}</span>}
-                        </div>
-                        <div className="checkout-field">
-                          <label>CVV</label>
-                          <input
-                            type="password"
-                            inputMode="numeric"
-                            value={card.cvv}
-                            onChange={(e) =>
-                              setCard((prev) => ({ ...prev, cvv: onlyDigits(e.target.value).slice(0, 4) }))
-                            }
-                            placeholder="•••"
-                            maxLength={4}
-                          />
-                          {errors.cvv && <span className="checkout-error">{errors.cvv}</span>}
-                        </div>
-                      </div>
-                      <label className="checkout-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={saveThisCard}
-                          onChange={(e) => setSaveThisCard(e.target.checked)}
-                        />
-                        บันทึกบัตรนี้ไว้สำหรับการซื้อครั้งถัดไป (เก็บเฉพาะเลข 4 ตัวท้าย ไม่เก็บ CVV)
-                      </label>
-                    </>
-                  )}
-                  <p className="checkout-security-note">
-                    การชำระเงินนี้เป็นโหมดจำลองสำหรับโปรเจกต์การศึกษา ระบบตรวจสอบเลขบัตรจริง
-                    (Luhn algorithm) แต่ยังไม่ได้เชื่อมต่อผู้ให้บริการชำระเงินจริง จึงไม่มีการตัดเงินเกิดขึ้น
-                  </p>
+              <div className="checkout-totals">
+                <div className="checkout-total-row">
+                  <span>ยอดรวมสินค้า</span>
+                  <span>{formatTHB(totals.subtotal)}</span>
                 </div>
-              )}
-
-              {paymentMethod === "promptpay" && (
-                <div className="checkout-promptpay">
-                  <div className="checkout-qr-placeholder">QR พร้อมเพย์</div>
-                  <p>สแกน QR เพื่อชำระเงิน {formatTHB(total)} (โหมดจำลอง)</p>
+                {totals.discount > 0 && (
+                  <div className="checkout-total-row">
+                    <span>ส่วนลด</span>
+                    <span style={{ color: "var(--gold)" }}>-{formatTHB(totals.discount)}</span>
+                  </div>
+                )}
+                <div className="checkout-total-row">
+                  <span>ค่าจัดส่ง</span>
+                  <span>{totals.shippingFee === 0 ? "ฟรี" : formatTHB(totals.shippingFee)}</span>
                 </div>
-              )}
-
-              {paymentMethod === "cod" && (
-                <p className="checkout-cod-note">ชำระเงินสดกับพนักงานส่งสินค้าเมื่อได้รับพัสดุ</p>
-              )}
-            </section>
-          </div>
-
-          {/* ── สรุปคำสั่งซื้อ ── */}
-          <aside className="checkout-summary">
-            <h2>สรุปคำสั่งซื้อ</h2>
-            <div className="checkout-summary-items">
-              {cart.map((item) => (
-                <div className="checkout-summary-item" key={item.id}>
-                  <span className="checkout-summary-item-name">
-                    {item.name} <span className="checkout-summary-item-qty">×{item.qty}</span>
-                  </span>
-                  <span>{formatTHB(item.price * item.qty)}</span>
+                <div className="checkout-total-row is-grand">
+                  <span>ยอดชำระทั้งหมด</span>
+                  <span>{formatTHB(totals.total)}</span>
                 </div>
-              ))}
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary checkout-submit"
+                disabled={isProcessing}
+              >
+                {isProcessing ? "กำลังดำเนินการ..." : `ชำระเงิน ${formatTHB(totals.total)}`}
+              </button>
+
+              <p className="checkout-note">
+                🔒 ข้อมูลบัตรของคุณถูกเข้ารหัสและไม่ถูกเก็บไว้ในเซิร์ฟเวอร์
+                <br />
+                การชำระเงินจะถูกจำลองในระบบ (ไม่มีการตัดเงินจริง)
+              </p>
             </div>
-            <div className="checkout-summary-rows">
-              <div className="checkout-summary-row">
-                <span>ยอดรวมสินค้า</span>
-                <span>{formatTHB(subtotal)}</span>
-              </div>
-              <div className="checkout-summary-row">
-                <span>ค่าจัดส่ง</span>
-                <span>{shippingFee === 0 ? "ฟรี" : formatTHB(shippingFee)}</span>
-              </div>
-              <div className="checkout-summary-row total">
-                <span>ยอดชำระทั้งหมด</span>
-                <span>{formatTHB(total)}</span>
-              </div>
-            </div>
-            <button type="submit" className="btn-primary checkout-submit" disabled={loading}>
-              {loading ? "กำลังดำเนินการ..." : `ชำระเงิน ${formatTHB(total)}`}
-            </button>
           </aside>
         </form>
       </div>

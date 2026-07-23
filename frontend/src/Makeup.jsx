@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import "./Makeup.css";
 import Header from "./Header";
 import { addToCart, slugify } from "./cart";
+import { isProductAvailable, listProducts } from "./admin-products/productsDataStore";
 /**
  * Makeup — หน้าหมวดเมคอัพ เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra
  * ธีม: White Luxury (ivory / ink / gold) — สีชุดเดียวกับ home.css
@@ -109,30 +110,85 @@ const PRODUCTS = [
   },
 ];
 
+const formatPrice = (value) => {
+  const numberValue = Number(value);
+  if (Number.isFinite(numberValue)) {
+    return `฿${numberValue.toLocaleString("th-TH")}`;
+  }
+  return value;
+};
+
+const inferMakeupCategory = (product) => {
+  const name = (product.name || "").toLowerCase();
+  if (name.includes("lip") || name.includes("rouge")) return "lips";
+  if (name.includes("eye") || name.includes("brow")) return "eyes";
+  if (name.includes("high") || name.includes("blush")) return "cheek";
+  return "face";
+};
+
+const normalizeMakeupProduct = (product) => {
+  const name = product.name || "";
+  const category = inferMakeupCategory(product);
+  return {
+    id: product.id || slugify(name),
+    name,
+    desc: product.descriptionShort || product.desc || "",
+    price: formatPrice(product.price ?? 0),
+    priceValue: Number(product.price || 0),
+    oldPrice: product.promoPrice ? formatPrice(product.promoPrice) : null,
+    tag: product.tags?.[0] || null,
+    category,
+    finish: product.variantOptions?.[0] || product.attributes?.[0]?.value || "",
+    img: product.mainImage || product.gallery?.[0] || product.img || "https://placehold.co/500x625/faf3ea/ad8a55?text=Product",
+  };
+};
+
 export default function Makeup() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [justAdded, setJustAdded] = useState(null);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const allProducts = listProducts().filter((p) => p.category === "เมคอัพ" && isProductAvailable(p));
+    setProducts(allProducts);
+  }, []);
 
   const handleAddToCart = (p) => {
-    addToCart({
+    const priceValue = Number(p.priceValue ?? String(p.price || "").replace(/[^0-9.-]/g, ""));
+    const result = addToCart({
       id: slugify(p.name),
       name: p.name,
       category: "เมคอัพ",
       variant: p.finish || "",
-      price: p.price,
+      price: priceValue,
       image: p.img,
     });
-    setJustAdded(p.name);
+
+    // สต็อกไม่พอ (หรือหมดแล้ว) ให้บอกตามจริง แทนที่จะขึ้น "เพิ่มแล้ว ✓" ทั้งที่ใส่ไม่ได้เลย/ได้ไม่ครบ
+    if (result.added > 0) {
+      setJustAdded({ name: p.name, label: result.capped ? `เพิ่มได้สูงสุด ${result.availableQty} ชิ้น` : "เพิ่มแล้ว ✓" });
+    } else {
+      setJustAdded({ name: p.name, label: "สินค้าหมดสต็อกแล้ว" });
+    }
     window.clearTimeout(handleAddToCart._t);
     handleAddToCart._t = window.setTimeout(() => setJustAdded(null), 1400);
   };
 
+  const displayProducts = useMemo(() => {
+    return products.map((product) => {
+      if (product?.name && (product?.descriptionShort || product?.desc)) {
+        return normalizeMakeupProduct(product);
+      }
+      return product;
+    });
+  }, [products]);
+
   const filtered = useMemo(() => {
-    if (activeCategory === "all") return PRODUCTS;
-    return PRODUCTS.filter((p) => p.category === activeCategory);
-  }, [activeCategory]);
+    if (activeCategory === "all") return displayProducts;
+    return displayProducts.filter((p) => p.category === activeCategory);
+  }, [activeCategory, displayProducts]);
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -219,11 +275,18 @@ export default function Makeup() {
           <div className="mk-product-grid">
             {filtered.map((p) => (
               <div className="mk-product-card" key={p.name}>
-                <div className="mk-product-media">
+                <a
+                  className="mk-product-link"
+                  href={`/product?id=${encodeURIComponent(slugify(p.name))}`}
+                  aria-label={`ดูรายละเอียดสินค้า ${p.name}`}
+                  style={{ color: "inherit", textDecoration: "none" }}
+                >
+                  <div className="mk-product-media">
+
                   {p.tag && <span className="mk-product-tag">{p.tag}</span>}
                   <img src={p.img} alt={p.name} />
                   <button className="mk-product-quickadd" onClick={() => handleAddToCart(p)}>
-                    {justAdded === p.name ? "เพิ่มแล้ว ✓" : "หยิบใส่ตะกร้า"}
+                    {justAdded?.name === p.name ? justAdded.label : "หยิบใส่ตะกร้า"}
                   </button>
                 </div>
                 <div className="mk-product-info">
@@ -232,11 +295,16 @@ export default function Makeup() {
                   <p className="mk-product-desc">{p.desc}</p>
                   <div className="mk-product-price">
                     {p.oldPrice && <span className="old">฿{p.oldPrice}</span>}
-                    ฿{p.price}
+                    {p.price}
                   </div>
                 </div>
-              </div>
-            ))}
+              </a>
+            <button className="mk-product-quickadd" onClick={() => handleAddToCart(p)}>
+              {justAdded?.name === p.name ? justAdded.label : "หยิบใส่ตะกร้า"}
+            </button>
+          </div>
+        ))}
+
           </div>
         )}
       </section>

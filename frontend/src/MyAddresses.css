@@ -1,0 +1,406 @@
+/* ─────────────────────────────────────────────────────────────
+   MyAddresses — หน้าจัดการที่อยู่จัดส่ง
+   ธีม: White Luxury (ivory / ink / muted gold / sage)
+   ───────────────────────────────────────────────────────────── */
+
+.myaddresses {
+  background: var(--ivory, #faf7f2);
+  min-height: 100vh;
+  color: var(--ink, #1a1a1a);
+  font-family: "IBM Plex Sans Thai", "Jost", sans-serif;
+}
+
+.ma-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* Breadcrumb */
+.ma-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--taupe, #8a8a8a);
+  margin-bottom: 24px;
+  text-transform: uppercase;
+}
+.ma-breadcrumb a {
+  color: var(--taupe, #8a8a8a);
+  text-decoration: none;
+}
+.ma-breadcrumb a:hover {
+  color: var(--gold, #ad8a55);
+}
+
+/* Head */
+.ma-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+.ma-title {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 28px;
+  font-weight: 500;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+.ma-sub {
+  color: var(--taupe, #8a8a8a);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Form Panel */
+.ma-form-panel {
+  background: #fff;
+  border: 1px solid var(--hairline, rgba(0,0,0,0.08));
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 28px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.ma-form-title {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 20px;
+}
+
+.ma-status {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.ma-status.success {
+  background: rgba(95, 122, 94, 0.1);
+  color: var(--sage, #5f7a5e);
+}
+.ma-status.error {
+  background: rgba(178, 58, 72, 0.1);
+  color: var(--rose, #b23a48);
+}
+
+/* Form Grid */
+.ma-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.ma-form-grid .full {
+  grid-column: 1 / -1;
+}
+@media (max-width: 640px) {
+  .ma-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ma-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ma-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft, rgba(36,31,26,0.62));
+  letter-spacing: 0.02em;
+}
+.ma-field .required {
+  color: var(--rose, #b23a48);
+}
+.ma-field input,
+.ma-field select,
+.ma-field textarea {
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--hairline, rgba(0,0,0,0.12));
+  background: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink, #1a1a1a);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ma-field input:focus,
+.ma-field select:focus,
+.ma-field textarea:focus {
+  outline: none;
+  border-color: var(--gold, #ad8a55);
+  box-shadow: 0 0 0 3px rgba(173, 138, 85, 0.12);
+}
+.ma-field input.error,
+.ma-field select.error,
+.ma-field textarea.error {
+  border-color: var(--rose, #b23a48);
+}
+.ma-field input::placeholder,
+.ma-field textarea::placeholder {
+  color: var(--ink-faint, rgba(36,31,26,0.4));
+}
+
+.ma-error {
+  font-size: 11.5px;
+  color: var(--rose, #b23a48);
+}
+
+.ma-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px !important;
+}
+.ma-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold, #ad8a55);
+}
+.ma-checkbox label {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink, #1a1a1a);
+}
+
+.ma-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hairline, rgba(0,0,0,0.08));
+}
+
+/* Address Cards */
+.ma-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ma-card {
+  background: #fff;
+  border: 1px solid var(--hairline, rgba(0,0,0,0.08));
+  border-radius: 16px;
+  padding: 22px;
+  position: relative;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+.ma-card:hover {
+  border-color: var(--gold-soft, rgba(173,138,85,0.22));
+}
+.ma-card.is-default {
+  border-color: var(--gold, #ad8a55);
+  background: linear-gradient(135deg, #fff 0%, rgba(173,138,85,0.03) 100%);
+}
+
+.ma-default-badge {
+  position: absolute;
+  top: -1px;
+  right: 20px;
+  background: var(--gold, #ad8a55);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 0 0 8px 8px;
+  letter-spacing: 0.03em;
+}
+
+.ma-card-main {
+  margin-bottom: 16px;
+}
+.ma-card-name {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.ma-card-phone,
+.ma-card-email {
+  font-size: 13px;
+  color: var(--taupe, #8a8a8a);
+  margin-bottom: 4px;
+}
+.ma-card-address {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink, #1a1a1a);
+  margin-top: 8px;
+}
+.ma-card-note {
+  font-size: 12px;
+  color: var(--gold-ink, #7a6038);
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: var(--gold-soft, rgba(173,138,85,0.08));
+  border-radius: 6px;
+}
+.ma-card-carrier {
+  font-size: 12px;
+  color: var(--taupe, #8a8a8a);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--hairline, rgba(0,0,0,0.08));
+}
+
+.ma-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ma-btn-secondary,
+.ma-btn-edit,
+.ma-btn-delete {
+  appearance: none;
+  border: 1px solid var(--hairline, rgba(0,0,0,0.12));
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+.ma-btn-secondary {
+  color: var(--gold-ink, #7a6038);
+  border-color: var(--gold-soft, rgba(173,138,85,0.22));
+}
+.ma-btn-secondary:hover {
+  background: var(--gold-soft, rgba(173,138,85,0.08));
+}
+.ma-btn-edit {
+  color: var(--ink, #1a1a1a);
+}
+.ma-btn-edit:hover {
+  border-color: var(--gold, #ad8a55);
+  color: var(--gold-ink, #7a6038);
+}
+.ma-btn-delete {
+  color: var(--rose, #b23a48);
+  border-color: var(--rose-soft, rgba(178,58,72,0.18));
+}
+.ma-btn-delete:hover {
+  background: var(--rose-soft, rgba(178,58,72,0.1));
+}
+
+/* Empty State */
+.ma-empty {
+  text-align: center;
+  padding: 60px 20px;
+  background: #fff;
+  border: 1px dashed var(--hairline, rgba(0,0,0,0.12));
+  border-radius: 16px;
+}
+.ma-empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+.ma-empty p {
+  font-size: 16px;
+  color: var(--ink, #1a1a1a);
+  margin: 0 0 6px;
+}
+.ma-empty-hint {
+  font-size: 13px;
+  color: var(--taupe, #8a8a8a);
+  margin-bottom: 20px;
+}
+
+/* Shipping Info */
+.ma-shipping-info {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid var(--hairline, rgba(0,0,0,0.08));
+}
+.ma-shipping-title {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0 0 20px;
+}
+.ma-carrier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ma-carrier-card {
+  background: #fff;
+  border: 1px solid var(--hairline, rgba(0,0,0,0.08));
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.ma-carrier-icon {
+  font-size: 24px;
+}
+.ma-carrier-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink, #1a1a1a);
+}
+.ma-carrier-eta {
+  font-size: 11px;
+  color: var(--taupe, #8a8a8a);
+}
+.ma-shipping-note {
+  font-size: 12px;
+  color: var(--taupe, #8a8a8a);
+  line-height: 1.6;
+}
+.ma-shipping-note a {
+  color: var(--gold-ink, #7a6038);
+  text-decoration: underline;
+}
+
+/* Buttons */
+.btn-primary {
+  appearance: none;
+  border: none;
+  background: var(--ink, #1a1a1a);
+  color: #fff;
+  border-radius: 10px;
+  padding: 11px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+.btn-primary:hover {
+  background: var(--gold, #ad8a55);
+}
+.btn-ghost {
+  appearance: none;
+  border: 1px solid var(--hairline, rgba(0,0,0,0.12));
+  background: #fff;
+  color: var(--ink, #1a1a1a);
+  border-radius: 10px;
+  padding: 11px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.15s ease;
+}
+.btn-ghost:hover {
+  border-color: var(--gold, #ad8a55);
+  color: var(--gold-ink, #7a6038);
+}
