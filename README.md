@@ -33,7 +33,6 @@
 - [ฟีเจอร์ของระบบ](#-ฟีเจอร์ของระบบ)
 - [เทคโนโลยีที่ใช้](#-เทคโนโลยีที่ใช้)
 - [เอกสารประกอบโครงงาน](#-เอกสารประกอบโครงงาน)
-  - [System Architecture](#-system-architecture)
   - [Use Case Diagram](#-use-case-diagram)
   - [Sequence Diagram](#-sequence-diagram)
   - [Wireframe / Prototype](#-wireframe--prototype)
@@ -41,7 +40,7 @@
 - [User Acceptance Testing](#-user-acceptance-testing-uat)
 - [SLA และแผนการดูแลระบบหลังส่งมอบ](#-sla-และแผนการดูแลระบบหลังส่งมอบ)
 - [แผนพัฒนาต่อในอนาคต](#-แผนพัฒนาต่อในอนาคต)
-- [License](#-license)
+
 
 ---
 
@@ -59,9 +58,9 @@
 
 | ชื่อ-นามสกุล | บทบาท | GitHub |
 |---|---|---|
-| [67133846 วรัตถา เตนากุล] | Project Manager | [@warattha48](https://github.com/warattha48) |
+| [67133846 วรัตถา เตนากุล] | backend| [@warattha48](https://github.com/warattha48) |
 | [67167033 เปมิกา เมฆลอย] | Frontend Developer | [@l0w0l-0](https://github.com/l0w0l-0) |
-| [67180663 ภัทรพล ถ่อมดี] | UI/UX Designer | [@noinahjajah](https://github.com/noinahjajah) |
+| [67180663 ภัทรพล ถ่อมดี] | backend | [@noinahjajah](https://github.com/noinahjajah) |
 
 
 > จัดทำในรายวิชา **CSI204 - ดิจิทัลแพลตฟอร์มสำหรับพัฒนาซอฟต์แวร์**
@@ -544,27 +543,6 @@
 | ❌ ไม่ผ่าน (Fail) | **1** |
 | 📋 รวมทั้งหมด | **16 Test Cases** |
 
-## ⚠️ Known Issues
-
-- Coupon Code ยังไม่สามารถใช้งานได้
-- ข้อมูล Checkout ยังไม่ถูกบันทึก
-- การตรวจสอบหมายเลขบัตรเครดิตยังไม่สมบูรณ์
-- ระบบติดตามคำสั่งซื้อ (Order Tracking) ยังไม่แสดงข้อมูล
-- Timeline การจัดส่งยังไม่พร้อมใช้งาน
-
-> **หมายเหตุ:** ระบบส่วนใหญ่สามารถใช้งานได้ตามวัตถุประสงค์ของโครงงาน โดยฟังก์ชันที่ไม่ผ่านจะอยู่ในแผนการพัฒนาต่อ (Future Improvements)
-**เส้นทางการสั่งซื้อของลูกค้า**
-
----
-
-```mermaid
-flowchart LR
-    A1["ค้นหา / กรองสินค้า"] --> A2["เลือกสินค้าใส่ตะกร้า"]
-    A2 --> A3["ตรวจสอบตะกร้า (Checkout)"]
-    A3 --> A4["ชำระเงิน"]
-    A4 --> A5["ระบบบันทึกคำสั่งซื้อ"]
-    A5 --> A6["ลูกค้าติดตามสถานะออเดอร์"]
-```
 
 
 ## 🧩 การออกแบบ UML
