@@ -343,7 +343,8 @@ flowchart LR
 
 - [ ] ❤️ Wishlist สินค้าที่ถูกใจ
 - [ ] 🌙 โหมดมืด (Dark Mode)
-- [ ] 🎁 ระบบสะสมแต้ม (Loyalty Program)
+- [ ] โค้ดส่วนลด
+- [ ] ยกเลิกคำสั่งซื้อ
 
 <div align="center">
 
