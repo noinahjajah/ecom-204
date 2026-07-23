@@ -206,19 +206,9 @@
 เอกสารออกแบบทั้งหมดของโครงงาน ตั้งแต่ภาพรวมสถาปัตยกรรม, Use Case, Sequence, Wireframe ไปจนถึง Data Schema — ออกแบบด้วย **draw.io** และ **Figma** ก่อนเริ่มพัฒนาโค้ดจริง
   
 ### 🧩 Use Case Diagram
- <img width="1223" height="1005" alt="ีuse caes uup" src="https://github.com/user-attachments/assets/d7eb665c-e9cf-42ed-a28a-9660ad71aa41" />
-
-```
- 
-
- 
+<img width="1247" height="1242" alt="เเก้ไข use" src="https://github.com/user-attachments/assets/17e14bdd-c9cb-4ba0-aeaa-0148e3337cee" />
 
 
-
-
-
-
-```
 ### 🔀 Sequence Diagram
 <img width="594" height="1327" alt="sequence-ecom204" src="https://github.com/user-attachments/assets/b1df131c-f4c5-4db9-963d-a1276fe45318" />
 
