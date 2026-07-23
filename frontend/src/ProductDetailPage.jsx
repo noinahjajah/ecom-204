@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./ProductDetailPage.css";
 import Header from "./Header";
 import { addToCart, parsePrice, slugify } from "./cart";
 import { supabase } from "./supabaseClient";
 import { getProductById as getFallbackProductById, getRelatedProducts as getFallbackRelatedProducts } from "./productData";
-import { isProductAvailable, listProducts } from "./admin-products/productsDataStore";
+import { isProductAvailable, listProducts, getProductById as getRemoteProductById } from "./admin-products/productsDataStore";
 
 const fallbackReviews = [
   {
@@ -101,15 +101,71 @@ function getLocalProductById(id, products) {
 
 export default function ProductDetailPage() {
   const productId = getQueryParam("id");
-  const localProducts = useMemo(() => listProducts(), [productId]);
+  // 🔄 CHANGED: listProducts() now hits the backend API (async), so it
+  // can't be read synchronously via useMemo anymore — load it into state
+  // and let `product`/`related` below re-derive once it arrives.
+  const [localProducts, setLocalProducts] = useState([]);
+  const [productsListLoaded, setProductsListLoaded] = useState(false);
+
+  // 🔄 CHANGED: fetch this one product by id directly (single-row query on
+  // the backend) instead of waiting on the full product list every time —
+  // that full list used to be the ONLY way this page found the product,
+  // which meant every visit paid for a full-table fetch (plus the seed
+  // check behind it) before anything could render. This fast path resolves
+  // as soon as the id in the URL is the product's real id (e.g. links from
+  // Header.jsx or the "related products" section below already use it).
+  const [remoteProduct, setRemoteProduct] = useState(null);
+  const [remoteChecked, setRemoteChecked] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRemoteChecked(false);
+    setRemoteProduct(null);
+    getRemoteProductById(productId)
+      .then((data) => {
+        if (!cancelled) setRemoteProduct(data);
+      })
+      .catch((err) => console.error("โหลดสินค้าไม่สำเร็จ", err))
+      .finally(() => {
+        if (!cancelled) setRemoteChecked(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
+
+  // Slower fallback path: needed when the URL's "id" is actually a slug
+  // (e.g. an SEO urlSlug, or an older bookmarked link) rather than the
+  // product's real id, in which case we have to search the full list.
+  // Also doubles as the source for the "related products" section.
+  useEffect(() => {
+    let cancelled = false;
+    listProducts()
+      .then((data) => {
+        if (!cancelled) setLocalProducts(data);
+      })
+      .catch((err) => console.error("โหลดรายการสินค้าไม่สำเร็จ", err))
+      .finally(() => {
+        if (!cancelled) setProductsListLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const product = useMemo(() => {
+    if (remoteProduct) return normalizeProductForDetail(remoteProduct);
+
     const localProduct = getLocalProductById(productId, localProducts) || getLocalProductById(slugify(productId), localProducts);
     if (localProduct) return normalizeProductForDetail(localProduct);
 
     const fallbackProduct = getFallbackProductById(productId) || getFallbackProductById(slugify(productId));
     return normalizeProductForDetail(fallbackProduct);
-  }, [productId, localProducts]);
+  }, [productId, remoteProduct, localProducts]);
+
+  // ยังไม่ถือว่า "ไม่พบสินค้า" จนกว่าทั้งสอง path (fetch เดี่ยว + รายการทั้งหมด)
+  // จะเช็คจบแล้วจริงๆ — กันหน้าไม่ให้ขึ้น "ไม่พบสินค้า" วูบก่อนข้อมูลมาถึง
+  const loading = !product && (!remoteChecked || !productsListLoaded);
 
   const [selectedVariant, setSelectedVariant] = useState(() => {
     if (!product) return "";
@@ -175,6 +231,19 @@ export default function ProductDetailPage() {
       window.location.href = "/checkout";
     }, 150);
   };
+
+  if (loading) {
+    return (
+      <div className="pdp">
+        <Header />
+        <div className="pdp-container">
+          <div className="pdp-empty">
+            <p>กำลังโหลดสินค้า...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (

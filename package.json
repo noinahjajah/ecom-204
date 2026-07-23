@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node backend/server.js",
     "server": "node backend/server.js",
+    "server:dev": "nodemon backend/server.js",
     "dev": "vite",
     "dev:web": "vite",
     "build": "vite build",

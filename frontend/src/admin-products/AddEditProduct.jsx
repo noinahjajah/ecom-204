@@ -97,23 +97,55 @@ function emptyProduct() {
 // ───────────────────────── Repeatable field helpers ─────────────────────────
 
 // 🖼️ Gallery — select image files from the device and add them to the gallery
+
+// รูปที่ถ่ายจากมือถือ/กล้องมักมีขนาดหลายเมกะไบต์ ถ้าเก็บเป็น base64 ตรงๆ ลง
+// localStorage (ทั้งของ admin_products_v1 และตะกร้าที่ก็อปรูปไปแสดงซ้ำ) จะทำให้
+// พื้นที่จัดเก็บเต็มเร็วมาก (QuotaExceededError) — ฟังก์ชันนี้ย่อขนาดรูปลงก่อน
+// แปลงเป็น JPEG คุณภาพพอเหมาะ เพื่อให้ไฟล์เล็กพอจะเก็บได้จริง
+const MAX_IMAGE_DIMENSION = 1000;
+const IMAGE_JPEG_QUALITY = 0.8;
+
+function resizeImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("ไม่สามารถอ่านไฟล์รูปภาพนี้ได้"));
+      img.onload = () => {
+        const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.width, img.height));
+        const width = Math.round(img.width * scale);
+        const height = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", IMAGE_JPEG_QUALITY));
+      };
+      img.src = typeof reader.result === "string" ? reader.result : "";
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function GalleryEditor({ gallery, onChange, onMainImageChange }) {
   const list = gallery || [];
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = typeof reader.result === "string" ? reader.result : "";
+    try {
+      const dataUrl = await resizeImageFile(file);
       if (dataUrl) {
         onChange([...list, dataUrl]);
         onMainImageChange?.(dataUrl);
       }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    } catch (err) {
+      alert(err?.message || "อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองอีกครั้ง");
+    }
   };
 
   const remove = (idx) => onChange(list.filter((_, i) => i !== idx));

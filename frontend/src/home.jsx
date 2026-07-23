@@ -91,8 +91,20 @@ export default function Home() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    const allProducts = listProducts().filter((p) => isProductAvailable(p));
-    setProducts(allProducts);
+    // 🔄 CHANGED: listProducts() now hits the backend API (async), so it
+    // can't be filtered directly anymore — it returns a Promise, not an
+    // array, which is what caused "listProducts(...).filter is not a
+    // function".
+    let cancelled = false;
+    listProducts()
+      .then((allProducts) => {
+        if (cancelled) return;
+        setProducts(allProducts.filter((p) => isProductAvailable(p)));
+      })
+      .catch((err) => console.error("โหลดรายการสินค้าไม่สำเร็จ", err));
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const displayProducts = useMemo(() => {
@@ -188,7 +200,7 @@ export default function Home() {
             <div className="product-card" key={p.name}>
               <a
                 className="product-card-link"
-                href={`/product?id=${encodeURIComponent(slugify(p.name))}`}
+                href={`/product?id=${encodeURIComponent(p.id || slugify(p.name))}`}
                 aria-label={`ดูรายละเอียดสินค้า ${p.name}`}
                 style={{ color: "inherit", textDecoration: "none" }}
               >

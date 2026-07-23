@@ -6,6 +6,39 @@
 import { isProductAvailable, listProducts, decrementStockForOrder } from "./admin-products/productsDataStore";
 import { supabase } from "./supabaseClient";
 
+// ── Products cache ──────────────────────────────────────────────
+// 🔄 CHANGED: listProducts() now hits the backend API (async), but all
+// the cart math below (getAvailableQty, addToCart, updateQty, setQty,
+// computeShippingFee, getCart, ...) is called SYNCHRONOUSLY from onClick
+// handlers and render code all over Makeup.jsx / Skincare.jsx /
+// ProductDetailPage.jsx / CartPage.jsx / Header.jsx. Making every one of
+// those async would mean rewriting all of those call sites too. Instead:
+// keep a small in-memory cache of the product list here, refreshed in
+// the background, and have the synchronous functions below read from the
+// cache instead of calling listProducts() directly.
+//
+// ⚠️ If a page's own list of products isn't loaded yet when this cache
+// is still empty (e.g. right after a hard refresh), stock checks below
+// fall back to "no product found → don't block" (see findMatchingProduct
+// callers), the same permissive behavior already used for unknown items.
+let productsCache = [];
+
+export async function refreshProductsCache() {
+  try {
+    productsCache = await listProducts();
+  } catch (err) {
+    console.error("โหลดรายการสินค้าไม่สำเร็จ (cart.js productsCache)", err);
+  }
+  return productsCache;
+}
+
+if (typeof window !== "undefined") {
+  refreshProductsCache();
+  // เดียวกับจังหวะ polling ที่หน้า Admin ใช้ (ProductsTable.jsx) — กันไม่ให้
+  // ตัวเลขสต็อกที่ใช้เช็คตรงนี้เก่าเกินไปเมื่อเทียบกับของจริงใน Supabase
+  setInterval(refreshProductsCache, 5000);
+}
+
 const LEGACY_CART_KEYS = ["mv_cart", "cart"];
 const GUEST_CART_KEY = "cart_guest";
 const CART_KEY_PREFIX = "cart_";
@@ -177,7 +210,7 @@ function getItemShipping(item, products) {
 
 function computeShippingFee(cart) {
   if (cart.length === 0) return 0;
-  const products = listProducts();
+  const products = productsCache;
   const payableFees = cart
     .map((item) => getItemShipping(item, products))
     .filter((s) => !s.free)
@@ -210,12 +243,40 @@ function readCart() {
   return cartKey === GUEST_CART_KEY ? readGuestCart() : readCartFromKey(cartKey);
 }
 
+// รูปสินค้าที่แอดมินอัปโหลดจากเครื่อง จะถูกเก็บเป็น base64 data URL ซึ่งมีขนาดใหญ่มาก
+// ถ้าเก็บซ้ำอีกชุดไว้ในตะกร้า อาจทำให้ localStorage เต็มโควตาได้ (QuotaExceededError)
+// จึงตัดข้อมูลรูปแบบ data URL ออกจากตะกร้าก่อนบันทึกลง localStorage เสมอ แล้วค่อยดึงรูป
+// จริงจาก product store มาแสดงตอน render แทน (ดู resolveCartItemImage)
+function stripHeavyImages(cart) {
+  return cart.map((item) =>
+    typeof item.image === "string" && item.image.startsWith("data:")
+      ? { ...item, image: null }
+      : item
+  );
+}
+
+function resolveCartItemImage(item, products) {
+  if (item.image) return item;
+  const product = findMatchingProduct(item, products);
+  const image = product?.mainImage || product?.gallery?.[0] || null;
+  return image ? { ...item, image } : item;
+}
+
 function writeCart(cart, key = getCartKey()) {
-  window.localStorage.setItem(key, JSON.stringify(cart));
+  const slimCart = stripHeavyImages(cart);
+  try {
+    window.localStorage.setItem(key, JSON.stringify(slimCart));
+  } catch (err) {
+    if (err && err.name === "QuotaExceededError") {
+      console.error("บันทึกตะกร้าไม่สำเร็จ: พื้นที่จัดเก็บในเบราว์เซอร์เต็ม", err);
+    } else {
+      throw err;
+    }
+  }
   notifyCartChange(cart);
 }
 
-function findMatchingProduct(item, products = listProducts()) {
+function findMatchingProduct(item, products = productsCache) {
   if (!item) return null;
   const byId = products.find((product) => product.id === item.id);
   if (byId) return byId;
@@ -227,7 +288,7 @@ function findMatchingProduct(item, products = listProducts()) {
   );
 }
 
-function isCartItemAvailable(item, products = listProducts()) {
+function isCartItemAvailable(item, products = productsCache) {
   const product = findMatchingProduct(item, products);
   if (!product) return true;
   const stockValue = product.stockTotal ?? product.stock;
@@ -254,7 +315,7 @@ function syncCartWithStock(cart = readCart(), key = getCartKey()) {
 // 🔒 หัวใจของ fix: จำนวนที่ "เพิ่มลงตะกร้าได้จริง" ต้องไม่เกิน stock ที่เหลือ
 // ของสินค้า (หรือของ variant นั้นๆ ถ้าสินค้ามี variants และ item ระบุ variant มา)
 // ใช้จุดเดียวนี้ทั้งใน addToCart / updateQty / setQty กันไม่ให้ตะกร้าไหลเกินสต็อก
-export function getAvailableQty(item, products = listProducts()) {
+export function getAvailableQty(item, products = productsCache) {
   const product = findMatchingProduct(item, products);
   if (!product) return Infinity; // หา product ไม่เจอ (เช่น fallback/demo data) อย่าบล็อกของเดิม
 
@@ -287,7 +348,8 @@ export function parsePrice(price) {
 }
 
 export function getCart() {
-  return syncCartWithStock();
+  const products = productsCache;
+  return syncCartWithStock().map((item) => resolveCartItemImage(item, products));
 }
 
 export function saveCart(cart) {
@@ -309,7 +371,7 @@ export function addToCart(product, qty = 1) {
     return { cart: getCart(), added: 0, availableQty: 0, capped: qty > 0 };
   }
 
-  const products = listProducts();
+  const products = productsCache;
   const availableQty = getAvailableQty(product, products);
 
   const cart = getCart();
@@ -339,7 +401,7 @@ export function addToCart(product, qty = 1) {
 }
 
 export function updateQty(id, delta) {
-  const products = listProducts();
+  const products = productsCache;
   const cart = getCart().map((item) => {
     if (item.id !== id) return item;
     const availableQty = getAvailableQty(item, products);
@@ -352,7 +414,7 @@ export function updateQty(id, delta) {
 export const updateQuantity = updateQty;
 
 export function setQty(id, qty) {
-  const products = listProducts();
+  const products = productsCache;
   const cart = getCart().map((item) => {
     if (item.id !== id) return item;
     const availableQty = getAvailableQty(item, products);

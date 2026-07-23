@@ -2,21 +2,25 @@
 // ─────────────────────────────────────────────────────────────
 // 🔗 Connects to:
 //    - productsDataStore.js → listProducts / deleteProducts / bulkUpdateProducts /
-//                              exportProductsJSON / importProductsJSON
+//                              exportProductsJSON / importProductsJSON  — now ASYNC
 //    - productsUtils.js     → compareBySort, matchesSearch
 //    - adminProducts.css    → .admin-* classes (shared with ProductsDashboard.jsx)
 // 🚦 Route: /admin/products.html — all filters live in the URL querystring
 //    (search/status/category/brand/store/sort/pageSize/page/noImage/
 //    incomplete/createdToday) so links from ProductsDashboard.jsx and the
 //    "ดูในตาราง" best-seller link work as deep links.
-// 🛠️ FIX (this pass): the search box used to call window.location.href on
-//    every keystroke → full page reload per character = box loses focus,
-//    typing is effectively broken. Now it's a local, debounced input (see
-//    SearchBox below) that only pushes to the URL ~450ms after the user
-//    stops typing, or immediately on Enter.
+// 🔄 CHANGED THIS PASS: productsDataStore functions now call the
+//    backend REST API (server.js → products_router.js → Supabase)
+//    instead of localStorage, so they're all async. `refresh()` and
+//    every handler that mutates products (`onBulkApply`, the per-row
+//    action buttons, `exportJSON`, `doImport`) now await the call
+//    before refreshing the table. Also note: bulkUpdateProducts's
+//    2nd arg is now a plain patch object (e.g. { status: "Hidden" }),
+//    not an updater function — see productsDataStore.js for why.
 // ⚠️ Side effects: polls listProducts() every 2s; bulk/row actions call
 //    productsDataStore mutators directly then refresh() — no optimistic
-//    UI, so on a slow store swap this would need a loading state.
+//    UI, so on a slow request the row won't visibly change until the
+//    round trip to the backend completes.
 // ─────────────────────────────────────────────────────────────
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { listProducts, deleteProducts, bulkUpdateProducts, exportProductsJSON, importProductsJSON } from "./productsDataStore";
@@ -141,7 +145,16 @@ export default function ProductsTable() {
     return Array.from(set).sort((a, b) => String(a).localeCompare(String(b), "th"));
   }, [products]);
 
-  const refresh = () => setProducts(listProducts());
+  // 🔄 CHANGED: listProducts() is now async (hits Supabase) — refresh()
+  // is now an async function; callers can `await` it or just fire it.
+  const refresh = async () => {
+    try {
+      const data = await listProducts();
+      setProducts(data);
+    } catch (err) {
+      console.error("โหลดรายการสินค้าไม่สำเร็จ", err);
+    }
+  };
 
   useEffect(() => {
     refresh();
@@ -201,21 +214,25 @@ export default function ProductsTable() {
     setSelectedIds((prev) => (allSelected ? prev.filter((id) => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
   };
 
-  const onBulkApply = () => {
+  const onBulkApply = async () => {
     const ids = selectedIds;
     if (!ids.length) return;
 
     // 🧭 map bulkMode → mutation. All go through bulkUpdateProducts()
     // except "delete" (deleteProducts) — both are defined in productsDataStore.js
-    if (bulkMode === "delete") deleteProducts(ids, { actor: "Admin" });
-    else if (bulkMode === "hide") bulkUpdateProducts(ids, (p) => ({ ...p, status: "Hidden" }), { actor: "Admin" });
-    else if (bulkMode === "show" || bulkMode === "activate" || bulkMode === "approve")
-      bulkUpdateProducts(ids, (p) => ({ ...p, status: "Active" }), { actor: "Admin" });
-    else if (bulkMode === "reject") bulkUpdateProducts(ids, (p) => ({ ...p, status: "Rejected" }), { actor: "Admin" });
-    else if (bulkMode === "outofstock") bulkUpdateProducts(ids, (p) => ({ ...p, stockTotal: 0, reservedStock: 0 }), { actor: "Admin" });
+    try {
+      if (bulkMode === "delete") await deleteProducts(ids, { actor: "Admin" });
+      else if (bulkMode === "hide") await bulkUpdateProducts(ids, { status: "Hidden" }, { actor: "Admin" });
+      else if (bulkMode === "show" || bulkMode === "activate" || bulkMode === "approve")
+        await bulkUpdateProducts(ids, { status: "Active" }, { actor: "Admin" });
+      else if (bulkMode === "reject") await bulkUpdateProducts(ids, { status: "Rejected" }, { actor: "Admin" });
+      else if (bulkMode === "outofstock") await bulkUpdateProducts(ids, { stockTotal: 0, reservedStock: 0 }, { actor: "Admin" });
+    } catch (err) {
+      alert(err?.message || "ทำรายการไม่สำเร็จ");
+    }
 
     setSelectedIds([]);
-    refresh();
+    await refresh();
   };
 
   const downloadText = (filename, text, mime) => {
@@ -228,14 +245,21 @@ export default function ProductsTable() {
     URL.revokeObjectURL(url);
   };
 
-  const exportJSON = () => downloadText(`products_export_${Date.now()}.json`, exportProductsJSON(), "application/json");
+  const exportJSON = async () => {
+    try {
+      const json = await exportProductsJSON();
+      downloadText(`products_export_${Date.now()}.json`, json, "application/json");
+    } catch (err) {
+      alert(err?.message || "Export ไม่สำเร็จ");
+    }
+  };
   const exportCSV = () => downloadText(`products_export_${Date.now()}.csv`, toCSV(filtered), "text/csv");
 
-  const doImport = () => {
+  const doImport = async () => {
     try {
-      importProductsJSON(importText, { actor: "Admin" });
+      await importProductsJSON(importText, { actor: "Admin" });
       setImportText("");
-      refresh();
+      await refresh();
     } catch (e) {
       alert(e?.message || "Import failed");
     }
@@ -424,20 +448,20 @@ export default function ProductsTable() {
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         <a href={`/product?id=${encodeURIComponent(p.seo?.urlSlug || p.id)}`} className="admin-row-link">ดูตัวอย่าง</a>
                         <div className="admin-actions-row">
-                          <button type="button" className="admin-mini-btn admin-mini-btn-strong" onClick={() => { bulkUpdateProducts([p.id], (pp) => ({ ...pp, status: "Active" }), { actor: "Admin" }); refresh(); }}>
+                          <button type="button" className="admin-mini-btn admin-mini-btn-strong" onClick={async () => { await bulkUpdateProducts([p.id], { status: "Active" }, { actor: "Admin" }); refresh(); }}>
                             เปิดขาย
                           </button>
-                          <button type="button" className="admin-mini-btn" onClick={() => { bulkUpdateProducts([p.id], (pp) => ({ ...pp, status: "Hidden" }), { actor: "Admin" }); refresh(); }}>
+                          <button type="button" className="admin-mini-btn" onClick={async () => { await bulkUpdateProducts([p.id], { status: "Hidden" }, { actor: "Admin" }); refresh(); }}>
                             ซ่อน
                           </button>
-                          <button type="button" className="admin-mini-btn" onClick={() => { bulkUpdateProducts([p.id], (pp) => ({ ...pp, status: "Rejected" }), { actor: "Admin" }); refresh(); }}>
+                          <button type="button" className="admin-mini-btn" onClick={async () => { await bulkUpdateProducts([p.id], { status: "Rejected" }, { actor: "Admin" }); refresh(); }}>
                             ปฏิเสธ
                           </button>
                         </div>
                         <button
                           type="button"
                           className="admin-mini-btn admin-mini-btn-danger"
-                          onClick={() => { bulkUpdateProducts([p.id], (pp) => ({ ...pp, stockTotal: 0, reservedStock: 0, status: "OutOfStock" }), { actor: "Admin" }); refresh(); }}
+                          onClick={async () => { await bulkUpdateProducts([p.id], { stockTotal: 0, reservedStock: 0, status: "OutOfStock" }, { actor: "Admin" }); refresh(); }}
                         >
                           หมดสต็อก
                         </button>

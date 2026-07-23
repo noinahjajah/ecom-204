@@ -151,8 +151,18 @@ export default function Makeup() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    const allProducts = listProducts().filter((p) => p.category === "เมคอัพ" && isProductAvailable(p));
-    setProducts(allProducts);
+    // 🔄 CHANGED: listProducts() now hits the backend API (async) — see
+    // home.jsx for the same fix and why the old sync .filter() broke.
+    let cancelled = false;
+    listProducts()
+      .then((allProducts) => {
+        if (cancelled) return;
+        setProducts(allProducts.filter((p) => p.category === "เมคอัพ" && isProductAvailable(p)));
+      })
+      .catch((err) => console.error("โหลดรายการสินค้าไม่สำเร็จ", err));
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleAddToCart = (p) => {
@@ -277,7 +287,7 @@ export default function Makeup() {
               <div className="mk-product-card" key={p.name}>
                 <a
                   className="mk-product-link"
-                  href={`/product?id=${encodeURIComponent(slugify(p.name))}`}
+                  href={`/product?id=${encodeURIComponent(p.id || slugify(p.name))}`}
                   aria-label={`ดูรายละเอียดสินค้า ${p.name}`}
                   style={{ color: "inherit", textDecoration: "none" }}
                 >
