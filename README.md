@@ -211,7 +211,7 @@
 
 ```
  
-### 🔀 Sequence Diagram
+
  
 
 
@@ -220,6 +220,9 @@
 
 
 ```
+### 🔀 Sequence Diagram
+<img width="594" height="1327" alt="sequence-ecom204" src="https://github.com/user-attachments/assets/b1df131c-f4c5-4db9-963d-a1276fe45318" />
+
  
 ### 🎨 Wireframe / Prototype
  
