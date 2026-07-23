@@ -71,7 +71,7 @@ function computeTopProducts(events, limit = 5) {
     row.revenue += e.revenue;
     map.set(e.productId, row);
   }
-  return [...map.values()].sort((a, b) => b.revenue - a.revenue).slice(0, limit);
+  return [...map.values()].sort((a, b) => b.qty - a.qty || b.revenue - a.revenue).slice(0, limit);
 }
 
 function pctChange(curr, prev) {
