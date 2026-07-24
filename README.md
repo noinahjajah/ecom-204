@@ -240,7 +240,15 @@ Full corrected README.md for Maison Véra project with updated tech stack sectio
 <img width="8192" height="6664" alt="Supabase_Order_Management-2026-07-24-053013" src="https://github.com/user-attachments/assets/b3ab70c8-d076-4bf8-ab75-501be333a464" />
 
 ### 🔀 Sequence Diagram
-<img width="594" height="1327" alt="sequence-ecom204" src="https://github.com/user-attachments/assets/b1df131c-f4c5-4db9-963d-a1276fe45318" />
+6.1 การเข้าสู่ระบบ + จัดการ Session (ของจริง: Google OAuth ตรงจาก frontend)
+<img width="1029" height="652" alt="6 1" src="https://github.com/user-attachments/assets/9f6a61a2-b7a4-4f60-8efc-c32f53481b62" />
+6.2 การสั่งซื้อ + ชำระเงิน (จำลอง, ไม่มี payment gateway จริง)
+<img width="1166" height="659" alt="6 2" src="https://github.com/user-attachments/assets/8f40f116-78d9-4395-bed8-2bf5395f74ec" />
+6.3 แอดมินจัดการสินค้า (ของจริง: มี role-gate ฝั่ง backend — ระบบยังไม่มีหน้าแอดมินจัดการออเดอร์แบบในภาพ)
+<img width="947" height="800" alt="6 3" src="https://github.com/user-attachments/assets/82989768-03ff-42ec-9907-02caac6f79e9" />
+
+
+
 
 ### SA
 <img width="5582" height="5205" alt="E-commerce_API_Architecture-2026-07-24-054924" src="https://github.com/user-attachments/assets/78f2100a-2400-442f-83c4-56669cb4cc2c" />
