@@ -1,7 +1,7 @@
 // 📄 ProductsTable.jsx
 // ─────────────────────────────────────────────────────────────
 // 🔗 Connects to:
-//    - productsDataStore.js → listProducts / deleteProducts / bulkUpdateProducts /
+//    - productsDataStore.js → listProductsAdmin / deleteProducts / bulkUpdateProducts /
 //                              exportProductsJSON / importProductsJSON  — now ASYNC
 //    - productsUtils.js     → compareBySort, matchesSearch
 //    - adminProducts.css    → .admin-* classes (shared with ProductsDashboard.jsx)
@@ -17,13 +17,13 @@
 //    before refreshing the table. Also note: bulkUpdateProducts's
 //    2nd arg is now a plain patch object (e.g. { status: "Hidden" }),
 //    not an updater function — see productsDataStore.js for why.
-// ⚠️ Side effects: polls listProducts() every 2s; bulk/row actions call
+// ⚠️ Side effects: polls listProductsAdmin() every 2s; bulk/row actions call
 //    productsDataStore mutators directly then refresh() — no optimistic
 //    UI, so on a slow request the row won't visibly change until the
 //    round trip to the backend completes.
 // ─────────────────────────────────────────────────────────────
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { listProducts, deleteProducts, bulkUpdateProducts, exportProductsJSON, importProductsJSON } from "./productsDataStore";
+import { listProductsAdmin, deleteProducts, bulkUpdateProducts, exportProductsJSON, importProductsJSON } from "./productsDataStore";
 import { compareBySort, matchesSearch } from "./productsUtils";
 import AdminHeader from "./AdminHeader";
 
@@ -145,11 +145,11 @@ export default function ProductsTable() {
     return Array.from(set).sort((a, b) => String(a).localeCompare(String(b), "th"));
   }, [products]);
 
-  // 🔄 CHANGED: listProducts() is now async (hits Supabase) — refresh()
+  // 🔄 CHANGED: listProductsAdmin() is now async (hits Supabase) — refresh()
   // is now an async function; callers can `await` it or just fire it.
   const refresh = async () => {
     try {
-      const data = await listProducts();
+      const data = await listProductsAdmin();
       setProducts(data);
     } catch (err) {
       console.error("โหลดรายการสินค้าไม่สำเร็จ", err);

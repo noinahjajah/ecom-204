@@ -18,6 +18,7 @@ const express = require('express');
 const router = express.Router();
 const productsService = require('../services/productsService');
 const supabase = require('../Supabaseclient');
+const { createUserClient } = supabase;
 
 /**
  * ต้อง login (Supabase session) ก่อนถึงจะตัดสต็อกได้ — กันไม่ให้ใครก็ได้ยิง
@@ -31,6 +32,39 @@ async function requireAuth(req, res, next) {
 
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) return res.status(401).json({ error: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' });
+
+  req.user = data.user;
+  next();
+}
+
+/**
+ * ต้อง login ด้วย Supabase session token ที่ผูกกับ profile role === 'admin'
+ * เท่านั้น — เดิมทีเส้นทางกลุ่ม Admin (ดูข้อมูลเต็ม/สร้าง/แก้/ลบสินค้า) ไม่มีการ
+ * ตรวจสิทธิ์ฝั่ง backend เลย มีแค่ AdminLayout.jsx ฝั่ง frontend ที่กันไว้ ซึ่งเป็น
+ * แค่ UI gate — ใครก็ยิง request ตรงมาที่ backend ได้โดยไม่ต้อง login เลย จึงเพิ่ม
+ * middleware นี้เป็นชั้นป้องกันจริงที่ server (ตรง Broken Access Control - OWASP A01).
+ */
+async function requireAdmin(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อน' });
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data?.user) return res.status(401).json({ error: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' });
+
+  // ผูก client กับ JWT ของผู้ใช้ ไม่ใช่ anon-key เฉยๆ — เผื่อ RLS policy ของตาราง
+  // profiles ต้องอาศัย auth.uid() ตอนเช็คสิทธิ์ (เหมือนที่ AdminLayout.jsx ฝั่ง
+  // frontend เรียกผ่าน client ที่ผูก session ของผู้ใช้เองอยู่แล้ว)
+  const userClient = createUserClient(token);
+  const { data: profile, error: profileError } = await userClient
+    .from('profiles')
+    .select('role')
+    .eq('id', data.user.id)
+    .single();
+
+  if (profileError || profile?.role !== 'admin') {
+    return res.status(403).json({ error: 'ต้องเป็นผู้ดูแลระบบเท่านั้น' });
+  }
 
   req.user = data.user;
   next();
@@ -71,7 +105,7 @@ router.get('/products', async (req, res) => {
  */
 // ⚠️ Must be declared BEFORE '/products/:id' — otherwise Express would
 // match "export" as an :id value and this route would never be hit.
-router.get('/products/export', async (req, res) => {
+router.get('/products/export', requireAdmin, async (req, res) => {
   try {
     const json = await productsService.exportProductsJSON();
     res.setHeader('Content-Type', 'application/json');
@@ -79,6 +113,28 @@ router.get('/products/export', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Export ไม่สำเร็จ' });
+  }
+});
+
+/**
+ * @swagger
+ * /products/admin:
+ *   get:
+ *     summary: ดึงรายการสินค้าทั้งหมด (ข้อมูลเต็ม สำหรับหน้า Admin)
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: รายการสินค้าแบบเต็ม (รวม sku/brand/store/createdAt/updatedAt/completeness ฯลฯ)
+ */
+// ⚠️ Must be declared BEFORE '/products/:id' — otherwise Express would
+// match "admin" as an :id value and this route would never be hit.
+router.get('/products/admin', requireAdmin, async (req, res) => {
+  try {
+    const products = await productsService.listProductsAdmin();
+    res.json(products);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'โหลดรายการสินค้าไม่สำเร็จ' });
   }
 });
 
@@ -132,7 +188,7 @@ router.get('/products/:id', async (req, res) => {
  *       200:
  *         description: สินค้าที่บันทึกแล้ว
  */
-router.post('/products', async (req, res) => {
+router.post('/products', requireAdmin, async (req, res) => {
   try {
     const { product, actor } = req.body || {};
     if (!product) return res.status(400).json({ error: 'ต้องส่ง product มาด้วย' });
@@ -169,7 +225,7 @@ router.post('/products', async (req, res) => {
  *       200:
  *         description: รายการสินค้าทั้งหมดหลังอัปเดต
  */
-router.patch('/products/bulk', async (req, res) => {
+router.patch('/products/bulk', requireAdmin, async (req, res) => {
   try {
     const { ids, patch, actor } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ต้องส่ง ids เป็น array' });
@@ -203,7 +259,7 @@ router.patch('/products/bulk', async (req, res) => {
  *       200:
  *         description: รายการสินค้าที่เหลือหลังลบ
  */
-router.delete('/products', async (req, res) => {
+router.delete('/products', requireAdmin, async (req, res) => {
   try {
     const { ids } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ต้องส่ง ids เป็น array' });
@@ -236,7 +292,7 @@ router.delete('/products', async (req, res) => {
  *       200:
  *         description: รายการสินค้าทั้งหมดหลัง import
  */
-router.post('/products/import', async (req, res) => {
+router.post('/products/import', requireAdmin, async (req, res) => {
   try {
     const { json, actor } = req.body || {};
     if (typeof json !== 'string') return res.status(400).json({ error: 'ต้องส่ง json เป็น string' });

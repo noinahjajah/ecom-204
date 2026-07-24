@@ -12,17 +12,15 @@ import {
   saveAddress,
   subscribeAddresses,
   saveOrder,
+  updateOrder,
   deductStock,
   createRouvoOrder,
   createSuperbetTracking,
+  REDIRECT_AFTER_LOGIN_KEY,
 } from "./cart";
 import { onlyDigits, formatCardNumber, formatExpiry, luhnCheck, detectCardBrand, isExpiryValid, isCvvValid, generateOrderId } from "./payment";
 import { supabase } from "./supabaseClient";
 import "./CheckoutPage.css";
-
-// key เดียวกับที่ CartPage.jsx / ProductDetailPage.jsx ใช้จำหน้าที่ตั้งใจจะไป
-// ก่อนถูกเด้งไป login (ให้ AuthCallback.jsx อ่านแล้วเด้งกลับมาที่นี่)
-const REDIRECT_AFTER_LOGIN_KEY = "mv_redirect_after_login";
 
 function formatTHB(n) {
   return (Number(n) || 0).toLocaleString("th-TH") + " บาท";
@@ -290,13 +288,12 @@ export default function CheckoutPage() {
         order.trackingUrl = tracking.trackingUrl;
         order.estimatedDelivery = tracking.estimatedDelivery;
         order.carrier = tracking.carrier;
-        // อัปเดต order ใน localStorage
-        const orders = getOrders();
-        const idx = orders.findIndex((o) => o.id === oid);
-        if (idx >= 0) {
-          orders[idx] = order;
-          window.localStorage.setItem("mv_orders", JSON.stringify(orders));
-        }
+        updateOrder(oid, {
+          trackingNumber: tracking.trackingNumber,
+          trackingUrl: tracking.trackingUrl,
+          estimatedDelivery: tracking.estimatedDelivery,
+          carrier: tracking.carrier,
+        });
       }
 
       clearCart();

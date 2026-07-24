@@ -102,8 +102,8 @@ function emptyProduct() {
 // localStorage (ทั้งของ admin_products_v1 และตะกร้าที่ก็อปรูปไปแสดงซ้ำ) จะทำให้
 // พื้นที่จัดเก็บเต็มเร็วมาก (QuotaExceededError) — ฟังก์ชันนี้ย่อขนาดรูปลงก่อน
 // แปลงเป็น JPEG คุณภาพพอเหมาะ เพื่อให้ไฟล์เล็กพอจะเก็บได้จริง
-const MAX_IMAGE_DIMENSION = 1000;
-const IMAGE_JPEG_QUALITY = 0.8;
+const MAX_IMAGE_DIMENSION = 720;
+const IMAGE_JPEG_QUALITY = 0.55;
 
 function resizeImageFile(file) {
   return new Promise((resolve, reject) => {

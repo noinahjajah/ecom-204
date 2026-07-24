@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { listProducts } from "./productsDataStore";
+import { listProductsAdmin } from "./productsDataStore";
 import { computeSalesMetrics, computeLowStock } from "./salesMetrics";
 import SalesTrendChart from "./SalesTrendChart";
 import "./adminProducts.css";
@@ -47,10 +47,23 @@ export default function ProductsDashboard() {
   const [range, setRange] = useState("daily"); // "daily" | "weekly"
 
   useEffect(() => {
-    setProducts(listProducts());
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const data = await listProductsAdmin();
+        if (!cancelled) setProducts(data);
+      } catch (err) {
+        console.error("โหลดข้อมูลยอดขายไม่สำเร็จ", err);
+      }
+    };
+
+    refresh();
     // 🔁 lightweight polling — keeps sales numbers fresh as checkouts happen
-    const t = setInterval(() => setProducts(listProducts()), 1500);
-    return () => clearInterval(t);
+    const t = setInterval(refresh, 1500);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
   }, []);
 
   const metrics = useMemo(() => computeSalesMetrics(products), [products]);

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./ProductDetailPage.css";
 import Header from "./Header";
-import { addToCart, parsePrice, slugify } from "./cart";
+import { addToCart, parsePrice, slugify, REDIRECT_AFTER_LOGIN_KEY } from "./cart";
 import { supabase } from "./supabaseClient";
 import { getProductById as getFallbackProductById, getRelatedProducts as getFallbackRelatedProducts } from "./productData";
 import { isProductAvailable, listProducts, getProductById as getRemoteProductById } from "./admin-products/productsDataStore";
@@ -221,7 +221,7 @@ export default function ProductDetailPage() {
     const { data } = await supabase.auth.getSession();
     if (!data?.session) {
       // ยังไม่ login -> พาไป login ก่อน แล้วให้ AuthCallback พากลับมา /checkout เอง
-      window.localStorage.setItem("mv_redirect_after_login", "/checkout");
+      window.localStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, "/checkout");
       window.location.href = "/login";
       return;
     }

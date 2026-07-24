@@ -23,9 +23,17 @@ import { supabase } from "../supabaseClient";
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
 async function request(path, options = {}) {
+  // แนบ Supabase access token อัตโนมัติทุก request (ถ้ามี session) — เส้นทางฝั่ง
+  // Admin (products/admin, bulk, import, export, ฯลฯ) ตอนนี้ต้องมี token ผูก
+  // role admin ถึงจะผ่าน requireAdmin middleware ที่ backend ได้ (ดู products_router.js)
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
+    headers,
   });
 
   if (!res.ok) {
@@ -117,6 +125,13 @@ export function computeDashboardStats(products) {
 
 export async function listProducts() {
   return request("/products");
+}
+
+// ⚠️ Admin product table/dashboard need full fields (sku, barcode, brand,
+// store, createdAt, updatedAt, completeness, ...) that listProducts()
+// strips out for the storefront — see backend's GET /products/admin.
+export async function listProductsAdmin() {
+  return request("/products/admin");
 }
 
 export async function getProductById(id) {

@@ -4,6 +4,11 @@ const cors = require('cors');
 
 const loginRoutes = require('./routes/login_router');
 const productsRoutes = require('./routes/products_router'); // 🆕 products REST API
+const cartRoutes = require('./routes/cart_router'); // 🆕 cart REST API
+const addressesRoutes = require('./routes/addresses_router'); // 🆕 saved shipping addresses REST API
+const ordersRoutes = require('./routes/orders_router'); // 🆕 order history REST API
+const cardsRoutes = require('./routes/cards_router'); // 🆕 saved cards REST API
+const integrationsRoutes = require('./routes/integrations_router'); // 🆕 Rouvo/Superbet proxy REST API
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,6 +27,11 @@ app.get('/', (req, res) => {
 
 app.use('/api', loginRoutes);
 app.use('/api', productsRoutes); // 🆕 mounts GET/POST/PATCH/DELETE /api/products...
+app.use('/api', cartRoutes); // 🆕 mounts GET/POST/PATCH/DELETE /api/cart...
+app.use('/api', addressesRoutes); // 🆕 mounts GET/POST/PATCH/DELETE /api/addresses...
+app.use('/api', ordersRoutes); // 🆕 mounts GET/POST/PATCH /api/orders...
+app.use('/api', cardsRoutes); // 🆕 mounts GET/POST/DELETE /api/cards...
+app.use('/api', integrationsRoutes); // 🆕 mounts POST /api/integrations/rouvo/... , /api/integrations/superbet/...
 
 app.listen(port, () => {
   console.log(`Backend server listening on port ${port}`);

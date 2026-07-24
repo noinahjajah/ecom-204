@@ -1,19 +1,12 @@
-export function slugify(input) {
-  const s = String(input ?? "").trim().toLowerCase();
-  if (!s) return "";
-  return s
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
+// slugify() / parsePrice() ถูก centralize ไว้ที่ cart.js อยู่แล้ว (ใช้กับ Makeup.jsx,
+// Skincare.jsx, ProductDetailPage.jsx ฯลฯ) — เดิมไฟล์นี้มี slugify() ของตัวเองที่ตัด
+// อักษรไทยทิ้งหมด (ทำให้สินค้าชื่อภาษาไทยล้วนได้ slug ว่างเปล่า) จึงเปลี่ยนมาใช้ตัวกลาง
+// จาก cart.js แทน เพื่อให้ slug ที่แอดมินสร้างตรงกับที่ฝั่งร้านค้าใช้จับคู่สินค้า
+import { parsePrice } from "../cart";
+export { slugify } from "../cart";
 
 export function parseMoneyToNumber(v) {
-  if (v === null || v === undefined) return 0;
-  const s = String(v).replace(/,/g, "").trim();
-  const n = Number(s);
-  return Number.isFinite(n) ? n : 0;
+  return parsePrice(v);
 }
 
 export function formatMoneyTHB(n) {

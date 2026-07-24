@@ -329,6 +329,13 @@ async function listProducts() {
   return fetchAllLite();
 }
 
+// ⚠️ Admin product table needs fields fetchAllLite() strips out for the
+// storefront (sku, barcode, brand, store, createdAt, updatedAt,
+// completeness, ...) — see products_router.js's GET /products/admin.
+async function listProductsAdmin() {
+  return fetchAll();
+}
+
 async function getProductById(id) {
   const { data, error } = await supabase.from(TABLE).select('id, data').eq('id', id).maybeSingle();
   if (error) throw error;
@@ -683,6 +690,7 @@ function computeDashboardStats(products) {
 
 module.exports = {
   listProducts,
+  listProductsAdmin,
   getProductById,
   upsertProduct,
   deleteProducts,
