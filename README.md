@@ -216,7 +216,8 @@
 <img width="1247" height="1242" alt="เเก้ไข use" src="https://github.com/user-attachments/assets/17e14bdd-c9cb-4ba0-aeaa-0148e3337cee" />
 
 ### Class Diagram 
-<img width="8192" height="6664" alt="Supabase_Order_Management-2026-07-24-053013" src="https://github.com/user-attachments/assets/b3ab70c8-d076-4bf8-ab75-501be333a464" />
+<img width="8192" height="5780" alt="Supabase Order Management-2026-07-24-084443" src="https://github.com/user-attachments/assets/497a0de9-970c-4c30-b80c-c02eb0572574" />
+
 
 ### 🔀 Sequence Diagram
 
