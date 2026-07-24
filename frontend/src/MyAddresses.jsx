@@ -7,6 +7,7 @@ import {
   removeSavedAddress,
   setDefaultAddress,
   subscribeAddresses,
+  REDIRECT_AFTER_LOGIN_KEY,
 } from "./cart";
 import { supabase } from "./supabaseClient";
 
@@ -88,7 +89,7 @@ export default function MyAddresses() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
-        window.localStorage.setItem("mv_redirect_after_login", "/myaddresses");
+        window.localStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, "/myaddresses");
         window.location.href = "/login";
         return;
       }
@@ -131,11 +132,8 @@ export default function MyAddresses() {
       isDefault: form.isDefault || addresses.length === 0,
     };
 
-    // บันทึกลง localStorage + sync กับ Rouvo (ถ้ามี API)
-    const saved = saveAddress(payload);
-
-    // 🔄 Sync กับ Rouvo CRM (ถ้ามีการตั้งค่า)
-    syncWithRouvo(saved, user);
+    // บันทึกลง localStorage + sync กับ backend (ซึ่งจะ sync กับ Rouvo CRM ต่อให้เอง)
+    saveAddress(payload);
 
     setSaveStatus("บันทึกที่อยู่สำเร็จ");
     setTimeout(() => {
@@ -192,39 +190,6 @@ export default function MyAddresses() {
     setErrors({});
     setSaveStatus("");
   };
-
-  // 🔄 Sync กับ Rouvo CRM
-  async function syncWithRouvo(address, userData) {
-    try {
-      // ตรวจสอบว่ามี Rouvo API key หรือไม่
-      const rouvoKey = import.meta.env?.VITE_ROUVO_API_KEY;
-      if (!rouvoKey) return; // ยังไม่ได้ตั้งค่า → ข้าม
-
-      await fetch("https://api.rouvo.com/v1/customers/addresses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${rouvoKey}`,
-        },
-        body: JSON.stringify({
-          customer_email: userData?.email,
-          customer_id: userData?.id,
-          address: {
-            name: address.fullName,
-            phone: address.phone,
-            line1: address.address,
-            city: address.district,
-            state: address.province,
-            postal_code: address.postcode,
-            country: "TH",
-            preferred_carrier: address.preferredCarrier,
-          },
-        }),
-      });
-    } catch (err) {
-      console.warn("Rouvo sync failed (non-critical):", err.message);
-    }
-  }
 
   if (loading) {
     return (

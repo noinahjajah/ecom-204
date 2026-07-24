@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { mergeGuestCartIntoUserCart, hasGuestCartItems, discardGuestCart } from "./cart";
+import { mergeGuestCartIntoUserCart, hasGuestCartItems, discardGuestCart, REDIRECT_AFTER_LOGIN_KEY } from "./cart";
 import { supabase } from "./supabaseClient";
 
 export default function AuthCallback() {
@@ -65,8 +65,8 @@ export default function AuthCallback() {
       }
 
       // ถ้าถูกเด้งมา login ระหว่างจะไปหน้าอื่น (เช่น /checkout) ให้กลับไปหน้านั้นแทนหน้าแรก
-      const redirectTo = window.localStorage.getItem("mv_redirect_after_login");
-      window.localStorage.removeItem("mv_redirect_after_login");
+      const redirectTo = window.localStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
+      window.localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
       window.location.href = redirectTo || "/";
     });
   }, []);

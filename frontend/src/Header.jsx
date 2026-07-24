@@ -88,11 +88,24 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
     window.location.href = `${basePath}/product?id=${encodeURIComponent(productId)}`;
   };
 
+  const [allProducts, setAllProducts] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listProducts()
+      .then((data) => {
+        if (!cancelled) setAllProducts(data);
+      })
+      .catch((err) => console.error("โหลดรายการสินค้าไม่สำเร็จ", err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return [];
 
-    const allProducts = listProducts();
     const seen = new Map();
 
     allProducts.forEach((product) => {
@@ -115,7 +128,7 @@ export default function Header({ links = defaultLinks, accountHref = "/login", c
         .toLowerCase();
       return haystack.includes(query);
     }).slice(0, 5);
-  }, [searchQuery]);
+  }, [searchQuery, allProducts]);
 
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
   const displayName = user?.user_metadata?.full_name || user?.email || "ผู้ใช้";

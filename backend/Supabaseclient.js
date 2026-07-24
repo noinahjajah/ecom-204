@@ -10,4 +10,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// สร้าง client ที่ผูกกับ JWT ของผู้ใช้ เพื่อให้ auth.uid() ใน RLS policy ทำงานถูกต้อง
+function createUserClient(accessToken) {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+}
+
 module.exports = supabase;
+module.exports.createUserClient = createUserClient;

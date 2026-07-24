@@ -13,11 +13,9 @@ import {
   computeTotals,
   FREE_SHIPPING_THRESHOLD,
   getAvailableQty,
+  REDIRECT_AFTER_LOGIN_KEY,
 } from "./cart";
 import { supabase } from "./supabaseClient";
-
-// key ที่ใช้จำหน้าที่ผู้ใช้ตั้งใจจะไป ก่อนถูกเด้งไป login (ให้ AuthCallback.jsx อ่านแล้วเด้งกลับมาที่นี่)
-const REDIRECT_AFTER_LOGIN_KEY = "mv_redirect_after_login";
 
 /**
  * CartPage — หน้าตะกร้าสินค้า เว็บอีคอมเมิร์ซเครื่องสำอาง Maison Véra

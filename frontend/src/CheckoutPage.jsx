@@ -12,12 +12,14 @@ import {
   saveAddress,
   subscribeAddresses,
   saveOrder,
+  updateOrder,
   deductStock,
   createRouvoOrder,
   createSuperbetTracking,
-  getOrders,
+  REDIRECT_AFTER_LOGIN_KEY,
 } from "./cart";
 import { onlyDigits, formatCardNumber, formatExpiry, luhnCheck, detectCardBrand, isExpiryValid, isCvvValid, generateOrderId } from "./payment";
+import { supabase } from "./supabaseClient";
 import "./CheckoutPage.css";
 
 function formatTHB(n) {
@@ -57,6 +59,19 @@ export default function CheckoutPage() {
   // Load cart
   useEffect(() => {
     setCart(getCart());
+  }, []);
+
+  // ต้อง login ก่อนถึงจะเข้าหน้า checkout ได้ (เหมือน CartPage.jsx / ProductDetailPage.jsx
+  // ที่เช็คก่อนพาไป /checkout อยู่แล้ว — เพิ่มเช็คซ้ำตรงนี้เผื่อมีคนเข้าหน้านี้ตรงๆ
+  // โดยไม่ผ่านปุ่มที่เช็ค session ไว้ก่อน, และ backend เองก็ปฏิเสธ decrement-stock
+  // ถ้าไม่มี token อยู่ดี)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        window.localStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, "/checkout");
+        window.location.href = "/login";
+      }
+    });
   }, []);
 
   // Load addresses
@@ -171,9 +186,31 @@ export default function CheckoutPage() {
       const now = new Date().toISOString();
 
       // ตัดสต็อก
-      const stockOk = deductStock(cart);
-      if (!stockOk) {
-        setError("สินค้าบางรายการหมดสต็อก กรุณาตรวจสอบตะกร้า");
+      // 🔄 CHANGED: deductStock() now wraps decrementStockForOrder(), which
+      // is async (hits the backend API). Without awaiting it, the request
+      // just fires in the background — checkout would "succeed" on screen
+      // even if the stock update failed, and any error would become an
+      // unhandled promise rejection instead of landing in the catch block
+      // below.
+      //
+      // ⚠️ decrementStockForOrder ตอนนี้ throw แทนการคืนค่า falsy เวลาสต็อกไม่พอ
+      // หรือ session หมดอายุ (ดู backend/services/productsService.js +
+      // products_router.js requireAuth) — ต้อง try/catch แยกจาก catch ก้อนใหญ่
+      // ด้านล่างเพื่อโชว์ข้อความที่ตรงประเด็นกว่า "เกิดข้อผิดพลาด กรุณาลองใหม่"
+      try {
+        await deductStock(cart);
+      } catch (stockErr) {
+        if (stockErr.status === 401) {
+          window.localStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, "/checkout");
+          window.location.href = "/login";
+          return;
+        }
+        if (stockErr.status === 409 && Array.isArray(stockErr.details)) {
+          const names = stockErr.details.map((d) => d.name || d.productId).join(", ");
+          setError(`สินค้าต่อไปนี้มีสต็อกไม่พอ: ${names} — กรุณาตรวจสอบตะกร้า`);
+        } else {
+          setError("สินค้าบางรายการหมดสต็อก กรุณาตรวจสอบตะกร้า");
+        }
         setIsProcessing(false);
         return;
       }
@@ -248,13 +285,12 @@ export default function CheckoutPage() {
         order.trackingUrl = tracking.trackingUrl;
         order.estimatedDelivery = tracking.estimatedDelivery;
         order.carrier = tracking.carrier;
-        // อัปเดต order ใน localStorage
-        const orders = getOrders();
-        const idx = orders.findIndex((o) => o.id === oid);
-        if (idx >= 0) {
-          orders[idx] = order;
-          window.localStorage.setItem("mv_orders", JSON.stringify(orders));
-        }
+        updateOrder(oid, {
+          trackingNumber: tracking.trackingNumber,
+          trackingUrl: tracking.trackingUrl,
+          estimatedDelivery: tracking.estimatedDelivery,
+          carrier: tracking.carrier,
+        });
       }
 
       clearCart();
