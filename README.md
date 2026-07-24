@@ -209,11 +209,13 @@
 <img width="1247" height="1242" alt="เเก้ไข use" src="https://github.com/user-attachments/assets/17e14bdd-c9cb-4ba0-aeaa-0148e3337cee" />
 
 ### Class Diagram 
-<img width="2692" height="1804" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/ec5af68c-dc01-475c-9fa1-89c800374d8a" />
+<img width="8192" height="6664" alt="Supabase_Order_Management-2026-07-24-053013" src="https://github.com/user-attachments/assets/b3ab70c8-d076-4bf8-ab75-501be333a464" />
 
 ### 🔀 Sequence Diagram
 <img width="594" height="1327" alt="sequence-ecom204" src="https://github.com/user-attachments/assets/b1df131c-f4c5-4db9-963d-a1276fe45318" />
 
+### SA
+<img width="5582" height="5205" alt="E-commerce_API_Architecture-2026-07-24-054924" src="https://github.com/user-attachments/assets/78f2100a-2400-442f-83c4-56669cb4cc2c" />
  
 ### 🎨 Wireframe / Prototype
  
