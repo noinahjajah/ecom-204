@@ -227,284 +227,119 @@ https://www.figma.com/design/4DE9xSQ5q0L19YMTQ7WO5m/Untitled?node-id=0-1&m=dev&t
  
 โครงสร้างข้อมูลหลักของระบบ กำหนดเป็น JSON Schema (draft 2020-12) เพื่อใช้ตรวจสอบความถูกต้องของข้อมูลที่เก็บใน `localStorage` ฝั่ง Frontend
  
-<details>
-<summary><code>product.schema.json</code> — โครงสร้างสินค้า (เก็บใน <code>admin_products_v1</code>)</summary>
-```json
+### products (สินค้า)
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://maisonvera.example/schemas/product.schema.json",
-  "title": "Product",
-  "description": "A single product record as stored in localStorage under admin_products_v1 (productsDataStore.js).",
-  "type": "object",
-  "required": [
-    "id", "name", "category", "sku", "price", "cost", "status",
-    "stockTotal", "reservedStock", "lowStockThreshold",
-    "createdAt", "updatedAt", "shipping", "activityLogs"
-  ],
-  "properties": {
-    "id": { "type": "string", "description": "e.g. \"prod_1_sku-serum-001\"" },
-    "name": { "type": "string" },
-    "enName": { "type": "string" },
-    "descriptionShort": { "type": "string" },
-    "details": { "type": "string" },
-    "highlights": { "type": "string", "description": "Newline-separated bullet points" },
-    "countryOfOrigin": { "type": "string" },
-    "manufacturer": { "type": "string" },
-    "category": { "type": "string", "examples": ["สกินแคร์", "เมคอัพ"] },
-    "store": { "type": "string" },
-    "brand": { "type": "string" },
-    "sku": { "type": "string" },
-    "barcode": { "type": "string" },
- 
-    "price": { "type": "number", "minimum": 0 },
-    "promoPrice": { "type": ["number", "null"], "minimum": 0 },
-    "cost": { "type": "number", "minimum": 0 },
- 
-    "status": {
-      "type": "string",
-      "enum": ["Active", "OutOfStock", "Hidden", "Pending", "Rejected"]
-    },
-    "statusDetail": {
-      "type": "object",
-      "description": "Denormalized booleans mirroring `status`, used for dashboard filters",
-      "properties": {
-        "pending": { "type": "boolean" },
-        "rejected": { "type": "boolean" },
-        "hidden": { "type": "boolean" },
-        "active": { "type": "boolean" },
-        "draft": { "type": "boolean" },
-        "outOfStock": { "type": "boolean" }
-      }
-    },
- 
-    "mainImage": { "type": "string", "description": "URL or base64 data: URI" },
-    "gallery": { "type": "array", "items": { "type": "string" } },
-    "image360": { "type": "string" },
-    "video": { "type": "array", "items": { "type": "string" } },
- 
-    "stockTotal": { "type": "integer", "minimum": 0 },
-    "reservedStock": { "type": "integer", "minimum": 0 },
-    "lowStockThreshold": { "type": "integer", "minimum": 0 },
-    "warehouses": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string" },
-          "stock": { "type": "integer", "minimum": 0 }
-        }
-      }
-    },
- 
-    "variantOptions": {
-      "type": "array",
-      "description": "Flat list of selectable option labels, e.g. shades or sizes",
-      "items": { "type": "string" }
-    },
-    "variants": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["sku", "price", "stock"],
-        "properties": {
-          "sku": { "type": "string" },
-          "price": { "type": "number", "minimum": 0 },
-          "stock": { "type": "integer", "minimum": 0 },
-          "barcode": { "type": "string" },
-          "image": { "type": "string" },
-          "options": {
-            "type": "object",
-            "description": "e.g. { \"shade\": \"Rose\", \"size\": \"30ml\" }",
-            "additionalProperties": { "type": "string" }
-          }
-        }
-      }
-    },
-    "attributes": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "key": { "type": "string" },
-          "value": { "type": "string" }
-        }
-      }
-    },
-    "tags": { "type": "array", "items": { "type": "string" } },
- 
-    "createdAt": { "type": "string", "format": "date-time" },
-    "updatedAt": { "type": "string", "format": "date-time" },
- 
-    "soldCount": { "type": "integer", "minimum": 0 },
-    "views": { "type": "integer", "minimum": 0 },
-    "clicks": { "type": "integer", "minimum": 0 },
-    "wishlist": { "type": "integer", "minimum": 0 },
-    "ratingAvg": { "type": "number", "minimum": 0, "maximum": 5 },
-    "ratingCount": { "type": "integer", "minimum": 0 },
-    "ratingReportedCount": { "type": "integer", "minimum": 0 },
- 
-    "activityLogs": {
-      "type": "array",
-      "description": "Audit trail; system:checkout entries are the only real source of sales data (see salesMetrics.js)",
-      "items": {
-        "type": "object",
-        "required": ["who", "at", "note"],
-        "properties": {
-          "who": {
-            "type": "string",
-            "examples": ["Admin", "system:checkout"]
-          },
-          "at": { "type": "string", "format": "date-time" },
-          "before": {
-            "type": ["object", "null"],
-            "description": "Snapshot of changed fields before the edit; shape varies by action",
-            "properties": {
-              "status": { "type": "string" },
-              "price": { "type": "number" },
-              "promoPrice": { "type": ["number", "null"] },
-              "stockTotal": { "type": "integer" },
-              "category": { "type": "string" }
-            }
-          },
-          "after": {
-            "type": ["object", "null"],
-            "properties": {
-              "status": { "type": "string" },
-              "price": { "type": "number" },
-              "promoPrice": { "type": ["number", "null"] },
-              "stockTotal": { "type": "integer" },
-              "category": { "type": "string" }
-            }
-          },
-          "note": {
-            "type": "string",
-            "examples": ["Created product", "Bulk update", "Upsert product", "Stock deducted from order"]
-          }
-        }
-      }
-    },
- 
-    "seo": {
-      "type": "object",
-      "properties": {
-        "metaTitle": { "type": "string" },
-        "metaDescription": { "type": "string" },
-        "urlSlug": { "type": "string" },
-        "keywords": { "type": "string" }
-      }
-    },
- 
-    "shipping": {
-      "type": "object",
-      "required": ["shippingFee", "freeShipping"],
-      "properties": {
-        "weightKg": { "type": "number" },
-        "widthCm": { "type": "number" },
-        "heightCm": { "type": "number" },
-        "lengthCm": { "type": "number" },
-        "carrier": { "type": "string", "examples": ["kerry"] },
-        "shippingFee": { "type": "number", "minimum": 0 },
-        "freeShipping": { "type": "boolean" }
-      }
-    },
- 
-    "completeness": {
-      "type": "object",
-      "properties": {
-        "hasImage": { "type": "boolean" },
-        "isComplete": { "type": "boolean" }
-      }
-    }
-  }
-}
-```
- 
-</details>
-<details>
-<summary><code>cart.schema.json</code> — โครงสร้างตะกร้าสินค้าและคูปอง (เก็บใน <code>localStorage</code>)</summary>
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://maisonvera.example/schemas/cart.schema.json",
-  "title": "Cart",
-  "description": "Shapes stored in localStorage by cart.js: the cart array itself, applied coupon code, and the coupons lookup table.",
-  "$defs": {
-    "cartItem": {
-      "type": "object",
-      "required": ["id", "name", "category", "price", "qty"],
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Matches a Product.id from product.schema.json"
-        },
-        "name": { "type": "string" },
-        "category": { "type": "string" },
-        "variant": {
-          "type": "string",
-          "description": "Selected variant label, or \"\" if the product has no variants"
-        },
-        "price": { "type": "number", "minimum": 0 },
-        "image": { "type": ["string", "null"] },
-        "qty": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Capped at getAvailableQty(item) — the product's (or matching variant's) remaining stock"
-        }
-      }
-    },
-    "coupon": {
-      "type": "object",
-      "required": ["type", "value"],
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["percent", "fixed", "free_shipping"]
-        },
-        "value": {
-          "type": "number",
-          "description": "Percent (0-100) for type=percent, currency amount for type=fixed, ignored for free_shipping"
-        },
-        "minSpend": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Minimum subtotal required to apply this coupon"
-        }
-      }
-    }
+  "id": "prod_1_sku-serum-001",
+  "sku": "SKU-SERUM-001",
+  "data": {
+    "name": "Velvet Silk Serum",
+    "enName": "Velvet Silk Serum",
+    "descriptionShort": "เซรั่มบำรุงผิวเข้มข้น เนื้อบางเบา ซึมไว",
+    "category": "สกินแคร์",
+    "store": "Maison Véra",
+    "brand": "Maison Véra",
+    "barcode": "8850000000010",
+    "price": 2480,
+    "promoPrice": null,
+    "cost": 980,
+    "status": "Active",
+    "tags": ["New", "Skincare"],
+    "mainImage": "https://.../serum.jpg",
+    "gallery": [],
+    "stockTotal": 120,
+    "reservedStock": 10,
+    "lowStockThreshold": 20,
+    "warehouses": [{ "name": "Bangkok", "qty": 120 }],
+    "variantOptions": [{ "name": "ขนาด", "values": ["30ml", "50ml"] }],
+    "variants": [{ "sku": "SKU-SERUM-001-30", "price": 2480, "stock": 60, "options": { "ขนาด": "30ml" } }],
+    "attributes": [{ "key": "ผิวที่เหมาะ", "value": "ทุกสภาพผิว" }],
+    "shipping": { "weightKg": 0.08, "carrier": "Kerry", "shippingFee": 0, "freeShipping": true },
+    "seo": { "metaTitle": "...", "urlSlug": "velvet-silk-serum", "keywords": "serum,skin,th" },
+    "soldCount": 340, "views": 9200, "ratingAvg": 4.8, "ratingCount": 88,
+    "createdAt": "2026-07-01T09:00:00Z",
+    "updatedAt": "2026-07-01T09:00:00Z"
   },
-  "type": "object",
-  "properties": {
-    "cart": {
-      "type": "array",
-      "description": "localStorage key holding the cart array",
-      "items": { "$ref": "#/$defs/cartItem" }
-    },
-    "appliedCoupon": {
-      "type": ["string", "null"],
-      "description": "Coupon code currently applied, or null"
-    },
-    "coupons": {
-      "type": "object",
-      "description": "Lookup table keyed by uppercase coupon code",
-      "additionalProperties": { "$ref": "#/$defs/coupon" }
-    },
-    "totals": {
-      "type": "object",
-      "description": "Shape returned by computeTotals(cart, appliedCoupon)",
-      "properties": {
-        "subtotal": { "type": "number", "minimum": 0 },
-        "discount": { "type": "number", "minimum": 0 },
-        "shippingFee": { "type": "number", "minimum": 0 },
-        "total": { "type": "number", "minimum": 0 }
-      }
-    }
-  }
+  "updated_at": "2026-07-01T09:00:00Z"
 }
-```
- 
-</details>
-
 ---
+### cart_items (ตะกร้าสินค้า)
+{
+  "id": "uuid",
+  "user_id": "uuid → auth.users",
+  "product_id": "prod_1_sku-serum-001",
+  "product_name": "Velvet Silk Serum",
+  "category": "สกินแคร์",
+  "variant": "30ml",
+  "price": 2480,
+  "quantity": 2,
+  "image_url": "https://.../serum.jpg",
+  "created_at": "2026-07-24T10:00:00Z"
+}
+---
+### orders (คำสั่งซื้อ) 
+{
+  "id": "order-id (generate จาก frontend)",
+  "user_id": "uuid → auth.users",
+  "items": [
+    { "id": "prod_1_sku-serum-001", "name": "Velvet Silk Serum", "variant": "30ml", "price": 2480, "qty": 1 }
+  ],
+  "subtotal": 2480,
+  "discount": 0,
+  "shipping_fee": 39,
+  "total": 2519,
+  "applied_coupon": null,
+  "status": "รอดำเนินการ",
+  "payment_method": "promptpay",
+  "card_info": null,
+  "shipping_address": { "fullName": "...", "phone": "...", "address": "..." },
+  "address_id": "addr-xxxxx",
+  "customer_name": "...",
+  "customer_email": "...",
+  "carrier": "Flash Express",
+  "tracking_number": "TH0123456789",
+  "tracking_url": null,
+  "estimated_delivery": null,
+  "status_history": [{ "status": "pending", "at": "2026-07-24T10:00:00Z" }],
+  "created_at": "2026-07-24T10:00:00Z",
+  "updated_at": "2026-07-24T10:00:00Z"
+}
+---
+### addresses (ที่อยู่จัดส่ง)
+{
+  "id": "addr-xxxxx",
+  "user_id": "uuid → auth.users",
+  "full_name": "...",
+  "phone": "...",
+  "email": "...",
+  "address": "...",
+  "district": "...",
+  "province": "...",
+  "postcode": "10110",
+  "preferred_carrier": "superbet",
+  "is_default": true,
+  "note": "",
+  "created_at": "2026-07-01T09:00:00Z",
+  "updated_at": "2026-07-24T10:00:00Z"
+}
+---
+### profiles (สมาชิก) 
+{
+  "id": "uuid = auth.users.id",
+  "role": "customer | admin"
+}
+---
+### saved_cards (บัตรที่บันทึกไว้) 
+{
+  "id": "visa-1234-12/28",
+  "user_id": "uuid → auth.users",
+  "brand": "visa",
+  "last4": "1234",
+  "expiry": "12/28",
+  "name": "...",
+  "created_at": "2026-07-01T09:00:00Z"
+}
+---
+
 
 # 🧪 User Acceptance Testing (UAT)
 
