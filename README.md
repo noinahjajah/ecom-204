@@ -219,7 +219,8 @@
 <img width="8192" height="6664" alt="Supabase_Order_Management-2026-07-24-053013" src="https://github.com/user-attachments/assets/b3ab70c8-d076-4bf8-ab75-501be333a464" />
 
 ### 🔀 Sequence Diagram
-<img width="2019" height="4032" alt="แบบแผนที่ยังไม่ได้ตั้งชื่อ drawio (1)" src="https://github.com/user-attachments/assets/d7451a35-6d55-45f4-82a5-4b86189d20d2" />
+
+<img width="2008" height="4021" alt="แบบแผนที่ยังไม่ได้ตั้งชื่อ drawio (2)" src="https://github.com/user-attachments/assets/52a09650-f7ae-425c-b1ab-1b5c13339b8f" />
 
 ### SA
 <img width="5582" height="5205" alt="E-commerce_API_Architecture-2026-07-24-054924" src="https://github.com/user-attachments/assets/78f2100a-2400-442f-83c4-56669cb4cc2c" />
