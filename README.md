@@ -218,6 +218,9 @@
 ### Class Diagram 
 <img width="8192" height="5780" alt="Supabase Order Management-2026-07-24-084443" src="https://github.com/user-attachments/assets/497a0de9-970c-4c30-b80c-c02eb0572574" />
 
+[Supabase Order Management-2026-07-24-084725.pdf](https://github.com/user-attachments/files/30339842/Supabase.Order.Management-2026-07-24-084725.pdf)
+
+
 
 ### 🔀 Sequence Diagram
 
