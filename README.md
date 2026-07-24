@@ -205,27 +205,6 @@
 [![Figma](https://img.shields.io/badge/Figma-F24E1E?style=flat-square&logo=figma&logoColor=white)](#)
 [![draw.io](https://img.shields.io/badge/draw.io-F08705?style=flat-square&logo=diagramsdotnet&logoColor=white)](#)
 
-การเปลี่ยนแปลงหลัก:
-
-Frontend: HTML5/CSS3 ธรรมดา → React (JSX) + Vite (คง Bootstrap/JS ไว้เพราะยังใช้อยู่ ถ้าไม่ได้ใช้ Bootstrap จริงแล้วก็ตัดออกได้)
-Backend: ย้ายจาก "แผนพัฒนาต่อ" มาเป็นหัวข้อปกติ เพราะ Express ทำงานอยู่แล้ว
-Database: MySQL (แผน) → Supabase (ของจริงที่ใช้อยู่)
-
-ถ้า Node.js ไม่ได้ถูกใช้ตรงๆ (เช่นรันผ่าน runtime อื่น) หรือมีไลบรารีเฉพาะที่อยากโชว์ badge เพิ่ม (เช่น Axios, React Router) บอกได้ จะเพิ่มให้
-
-หมายเหตุ: อย่าลืมเช็คส่วน "แผนพัฒนาต่อในอนาคต" ท้ายไฟล์ด้วย เพราะตอนนี้อาจมีรายการที่ทำเสร็จไปแล้วซ้ำอยู่ (เช่นถ้า backend/Supabase เคยอยู่ในนั้น)
-
-เอาโค้ดทั้งหมดมาที่เเก้ไข
-
-Orchestrated complete corrected code compilation for repository
-Orchestrated complete corrected code compilation for repository
-Full corrected README.md for Maison Véra project with updated tech stack section
-**เครื่องมือออกแบบ**
-
-[![Figma](https://img.shields.io/badge/Figma-F24E1E?style=flat-square&logo=figma&logoColor=white)](#)
-[![draw.io](https://img.shields.io/badge/draw.io-F08705?style=flat-square&logo=diagramsdotnet&logoColor=white)](#)
-
----
 
 ---
  
