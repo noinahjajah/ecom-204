@@ -224,10 +224,14 @@
 https://www.figma.com/design/4DE9xSQ5q0L19YMTQ7WO5m/Untitled?node-id=0-1&m=dev&t=A3I9SIY3tRLKjp8d-1
 
 ### 🗂️ Data Schema (JSON)
- 
+
 โครงสร้างข้อมูลหลักของระบบ กำหนดเป็น JSON Schema (draft 2020-12) เพื่อใช้ตรวจสอบความถูกต้องของข้อมูลที่เก็บใน `localStorage` ฝั่ง Frontend
- 
+
+---
+
 ### products (สินค้า)
+
+```json
 {
   "id": "prod_1_sku-serum-001",
   "sku": "SKU-SERUM-001",
@@ -243,26 +247,73 @@ https://www.figma.com/design/4DE9xSQ5q0L19YMTQ7WO5m/Untitled?node-id=0-1&m=dev&t
     "promoPrice": null,
     "cost": 980,
     "status": "Active",
-    "tags": ["New", "Skincare"],
+    "tags": [
+      "New",
+      "Skincare"
+    ],
     "mainImage": "https://.../serum.jpg",
     "gallery": [],
     "stockTotal": 120,
     "reservedStock": 10,
     "lowStockThreshold": 20,
-    "warehouses": [{ "name": "Bangkok", "qty": 120 }],
-    "variantOptions": [{ "name": "ขนาด", "values": ["30ml", "50ml"] }],
-    "variants": [{ "sku": "SKU-SERUM-001-30", "price": 2480, "stock": 60, "options": { "ขนาด": "30ml" } }],
-    "attributes": [{ "key": "ผิวที่เหมาะ", "value": "ทุกสภาพผิว" }],
-    "shipping": { "weightKg": 0.08, "carrier": "Kerry", "shippingFee": 0, "freeShipping": true },
-    "seo": { "metaTitle": "...", "urlSlug": "velvet-silk-serum", "keywords": "serum,skin,th" },
-    "soldCount": 340, "views": 9200, "ratingAvg": 4.8, "ratingCount": 88,
+    "warehouses": [
+      {
+        "name": "Bangkok",
+        "qty": 120
+      }
+    ],
+    "variantOptions": [
+      {
+        "name": "ขนาด",
+        "values": [
+          "30ml",
+          "50ml"
+        ]
+      }
+    ],
+    "variants": [
+      {
+        "sku": "SKU-SERUM-001-30",
+        "price": 2480,
+        "stock": 60,
+        "options": {
+          "ขนาด": "30ml"
+        }
+      }
+    ],
+    "attributes": [
+      {
+        "key": "ผิวที่เหมาะ",
+        "value": "ทุกสภาพผิว"
+      }
+    ],
+    "shipping": {
+      "weightKg": 0.08,
+      "carrier": "Kerry",
+      "shippingFee": 0,
+      "freeShipping": true
+    },
+    "seo": {
+      "metaTitle": "...",
+      "urlSlug": "velvet-silk-serum",
+      "keywords": "serum,skin,th"
+    },
+    "soldCount": 340,
+    "views": 9200,
+    "ratingAvg": 4.8,
+    "ratingCount": 88,
     "createdAt": "2026-07-01T09:00:00Z",
     "updatedAt": "2026-07-01T09:00:00Z"
   },
   "updated_at": "2026-07-01T09:00:00Z"
 }
+```
+
 ---
+
 ### cart_items (ตะกร้าสินค้า)
+
+```json
 {
   "id": "uuid",
   "user_id": "uuid → auth.users",
@@ -275,13 +326,24 @@ https://www.figma.com/design/4DE9xSQ5q0L19YMTQ7WO5m/Untitled?node-id=0-1&m=dev&t
   "image_url": "https://.../serum.jpg",
   "created_at": "2026-07-24T10:00:00Z"
 }
+```
+
 ---
-### orders (คำสั่งซื้อ) 
+
+### orders (คำสั่งซื้อ)
+
+```json
 {
   "id": "order-id (generate จาก frontend)",
   "user_id": "uuid → auth.users",
   "items": [
-    { "id": "prod_1_sku-serum-001", "name": "Velvet Silk Serum", "variant": "30ml", "price": 2480, "qty": 1 }
+    {
+      "id": "prod_1_sku-serum-001",
+      "name": "Velvet Silk Serum",
+      "variant": "30ml",
+      "price": 2480,
+      "qty": 1
+    }
   ],
   "subtotal": 2480,
   "discount": 0,
@@ -291,7 +353,11 @@ https://www.figma.com/design/4DE9xSQ5q0L19YMTQ7WO5m/Untitled?node-id=0-1&m=dev&t
   "status": "รอดำเนินการ",
   "payment_method": "promptpay",
   "card_info": null,
-  "shipping_address": { "fullName": "...", "phone": "...", "address": "..." },
+  "shipping_address": {
+    "fullName": "...",
+    "phone": "...",
+    "address": "..."
+  },
   "address_id": "addr-xxxxx",
   "customer_name": "...",
   "customer_email": "...",
@@ -299,12 +365,22 @@ https://www.figma.com/design/4DE9xSQ5q0L19YMTQ7WO5m/Untitled?node-id=0-1&m=dev&t
   "tracking_number": "TH0123456789",
   "tracking_url": null,
   "estimated_delivery": null,
-  "status_history": [{ "status": "pending", "at": "2026-07-24T10:00:00Z" }],
+  "status_history": [
+    {
+      "status": "pending",
+      "at": "2026-07-24T10:00:00Z"
+    }
+  ],
   "created_at": "2026-07-24T10:00:00Z",
   "updated_at": "2026-07-24T10:00:00Z"
 }
+```
+
 ---
+
 ### addresses (ที่อยู่จัดส่ง)
+
+```json
 {
   "id": "addr-xxxxx",
   "user_id": "uuid → auth.users",
@@ -321,14 +397,24 @@ https://www.figma.com/design/4DE9xSQ5q0L19YMTQ7WO5m/Untitled?node-id=0-1&m=dev&t
   "created_at": "2026-07-01T09:00:00Z",
   "updated_at": "2026-07-24T10:00:00Z"
 }
+```
+
 ---
-### profiles (สมาชิก) 
+
+### profiles (สมาชิก)
+
+```json
 {
   "id": "uuid = auth.users.id",
   "role": "customer | admin"
 }
+```
+
 ---
-### saved_cards (บัตรที่บันทึกไว้) 
+
+### saved_cards (บัตรที่บันทึกไว้)
+
+```json
 {
   "id": "visa-1234-12/28",
   "user_id": "uuid → auth.users",
@@ -338,7 +424,7 @@ https://www.figma.com/design/4DE9xSQ5q0L19YMTQ7WO5m/Untitled?node-id=0-1&m=dev&t
   "name": "...",
   "created_at": "2026-07-01T09:00:00Z"
 }
----
+```
 
 
 # 🧪 User Acceptance Testing (UAT)
