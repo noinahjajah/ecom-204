@@ -13,6 +13,7 @@ import MyAddresses from './MyAddresses';
 import ProductsDashboard from './admin-products/ProductsDashboard';
 import ProductsTable from './admin-products/ProductsTable';
 import AddEditProduct from './admin-products/AddEditProduct';
+import AdminOrders from './admin-products/AdminOrders';
 import AdminLogin from './admin-products/AdminLogin';
 import AdminLayout from './admin-products/AdminLayout';
 import AuthCallback from './AuthCallback';
@@ -50,7 +51,9 @@ const route =
                               ? "adminProductsNew"
                               : pathname === "/admin/products/edit" || pathname === "/admin/products/edit.html"
                                 ? "adminProductsEdit"
-                                : "home";
+                                : pathname === "/admin/orders" || pathname === "/admin/orders.html"
+                                  ? "adminOrders"
+                                  : "home";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -91,6 +94,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     ) : route === "adminProductsEdit" ? (
       <AdminLayout>
         <AddEditProduct />
+      </AdminLayout>
+    ) : route === "adminOrders" ? (
+      <AdminLayout>
+        <AdminOrders />
       </AdminLayout>
     ) : (
       <Home />

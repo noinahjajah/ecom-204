@@ -1,6 +1,18 @@
 // 📄 backend/services/ordersService.js
 // Order history operations with Supabase
 
+// สำหรับหน้า Admin — ดึงออเดอร์ทั้งหมดของทุกผู้ใช้ (ไม่กรองด้วย user_id)
+// รวม items/shipping_address ที่เก็บแนบไว้ในแถวออเดอร์อยู่แล้วตอนสร้าง (denormalized)
+async function getAllOrders(supabase) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(`Failed to fetch orders: ${error.message}`);
+  return data || [];
+}
+
 async function getOrders(supabase, userId) {
   if (!userId) throw new Error('User ID required');
 
@@ -80,8 +92,34 @@ async function updateOrder(supabase, userId, id, patch = {}) {
   return data;
 }
 
+// เหมือน updateOrder แต่ไม่กรองด้วย user_id — ใช้จากหน้า Admin ซึ่งต้องแก้ไข
+// ออเดอร์ของผู้ใช้คนไหนก็ได้ (สิทธิ์ admin ถูกตรวจที่ requireAdmin middleware แล้ว)
+async function updateOrderAdmin(supabase, id, patch = {}) {
+  if (!id) throw new Error('Order ID required');
+
+  const row = { updated_at: new Date().toISOString() };
+  if (patch.status !== undefined) row.status = patch.status;
+  if (patch.trackingNumber !== undefined) row.tracking_number = patch.trackingNumber;
+  if (patch.trackingUrl !== undefined) row.tracking_url = patch.trackingUrl;
+  if (patch.estimatedDelivery !== undefined) row.estimated_delivery = patch.estimatedDelivery;
+  if (patch.carrier !== undefined) row.carrier = patch.carrier;
+  if (patch.statusHistory !== undefined) row.status_history = patch.statusHistory;
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update(row)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to update order: ${error.message}`);
+  return data;
+}
+
 module.exports = {
   getOrders,
+  getAllOrders,
   upsertOrder,
   updateOrder,
+  updateOrderAdmin,
 };

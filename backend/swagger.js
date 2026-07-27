@@ -1,4 +1,5 @@
 const swaggerJsdoc = require('swagger-jsdoc');
+const path = require('path');
 
 const options = {
   definition: {
@@ -10,7 +11,7 @@ const options = {
     },
     servers: [{ url: 'http://localhost:3000' }],
   },
-  apis: ['./routes/*.js'], // อ่าน comment แบบ JSDoc จากไฟล์ใน routes/
+  apis: [path.join(__dirname, 'routes/*.js').split(path.sep).join('/')], // อ่าน comment แบบ JSDoc จากไฟล์ใน routes/ (glob ต้องการ / แม้บน Windows)
 };
 
 const swaggerSpec = swaggerJsdoc(options);

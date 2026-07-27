@@ -86,6 +86,7 @@ const defaultLinks = [
   { label: "Dashboard", href: "/admin/dashboard" },
   { label: "สินค้าทั้งหมด", href: "/admin/products.html?status=" },
   { label: "เพิ่มสินค้า", href: "/admin/products/new.html" },
+  { label: "คำสั่งซื้อ", href: "/admin/orders" },
 ];
 
 export default function AdminHeader({ links = defaultLinks }) {

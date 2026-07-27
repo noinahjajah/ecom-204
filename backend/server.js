@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 
 const loginRoutes = require('./routes/login_router');
 const productsRoutes = require('./routes/products_router'); // 🆕 products REST API
@@ -24,6 +26,8 @@ app.use(express.json({ limit: "20mb" }));
 app.get('/', (req, res) => {
   res.send('Backend is running');
 });
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec)); // 🆕 Swagger UI ที่ /api-docs
 
 app.use('/api', loginRoutes);
 app.use('/api', productsRoutes); // 🆕 mounts GET/POST/PATCH/DELETE /api/products...

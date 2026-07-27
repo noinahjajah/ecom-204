@@ -60,7 +60,7 @@ router.post('/cards', requireAuth, async (req, res) => {
 
 /**
  * @swagger
- * /cards/:id:
+ * /cards/{id}:
  *   delete:
  *     summary: ลบบัตรที่บันทึกไว้
  *     security:

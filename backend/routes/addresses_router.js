@@ -60,7 +60,7 @@ router.post('/addresses', requireAuth, async (req, res) => {
 
 /**
  * @swagger
- * /addresses/:id:
+ * /addresses/{id}:
  *   patch:
  *     summary: แก้ไขที่อยู่จัดส่งที่บันทึกไว้
  *     security:
@@ -82,7 +82,7 @@ router.patch('/addresses/:id', requireAuth, async (req, res) => {
 
 /**
  * @swagger
- * /addresses/:id/default:
+ * /addresses/{id}/default:
  *   patch:
  *     summary: ตั้งที่อยู่นี้เป็นที่อยู่เริ่มต้น
  *     security:
@@ -101,7 +101,7 @@ router.patch('/addresses/:id/default', requireAuth, async (req, res) => {
 
 /**
  * @swagger
- * /addresses/:id:
+ * /addresses/{id}:
  *   delete:
  *     summary: ลบที่อยู่จัดส่งที่บันทึกไว้
  *     security:

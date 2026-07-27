@@ -98,7 +98,7 @@ router.post('/cart', requireAuth, async (req, res) => {
 
 /**
  * @swagger
- * /cart/:id:
+ * /cart/{id}:
  *   patch:
  *     summary: อัปเดตจำนวนสินค้า
  *     security:
@@ -139,7 +139,7 @@ router.patch('/cart/:id', requireAuth, async (req, res) => {
 
 /**
  * @swagger
- * /cart/:id:
+ * /cart/{id}:
  *   delete:
  *     summary: ลบสินค้าออกจากตะกร้า
  *     security:
